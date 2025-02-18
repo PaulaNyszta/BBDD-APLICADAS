@@ -193,3 +193,121 @@ ELSE
 		PRINT 'La tabla Fcatura ya existe.';
 	END;
 
+-- SP PARA CLIENTE
+
+
+CREATE PROCEDURE ddbba.insertarCliente
+    @id int,
+    @gen VARCHAR(50),
+    @tipo VARCHAR(50),
+	@ap VARCHAR(50),
+	@nom VARCHAR(50),
+	@fnac DATE 
+AS
+BEGIN
+
+IF @id <= 0
+PRINT 'Error. Inserte un Id de Cliente mayor a 0';
+RETURN;
+
+END 
+    INSERT INTO Cliente
+    VALUES (@id,@gen,@tipo,@ap,@nom,@fnac);
+   
+   PRINT 'Cliente insertado correctamente';
+END;
+
+
+
+-- SP PARA TABLA PEDIDO
+
+CREATE PROCEDURE ddbba.InsertarPedido
+    @id_pedido INT,
+    @fecha_pedido DATE,
+    @hora_pedido DATETIME,
+    @id_cliente INT,
+    @id_mp INT,
+    @id_empleado INT,
+    @iden_pago VARCHAR(30)
+AS
+BEGIN
+    IF @id_pedido <= 0
+    BEGIN
+        PRINT 'Error: id_pedido debe ser mayor a 0';
+        RETURN;
+    END
+    
+    --IF @fecha_pedido < DATEADD(YEAR, -1, GETDATE())
+    --BEGIN
+        --PRINT 'Error: fecha_pedido no puede ser menor a un año';
+        --RETURN;
+    --END
+    
+    IF @id_cliente <= 0 OR @id_mp <= 0 OR @id_empleado <= 0
+    BEGIN
+        PRINT 'Error: id_cliente, id_mp e id_empleado deben ser mayores a 0';
+        RETURN;
+    END
+    
+    IF LEN(@iden_pago) = 0 OR LEN(@iden_pago) > 30
+    BEGIN
+        PRINT 'Error: El iden_pago debe tener entre 1 y 30 caracteres.';
+        RETURN;
+    END
+    
+    INSERT INTO ddbba.Pedido (id_pedido, fecha_pedido, hora_pedido, id_cliente, id_mp, id_empleado, iden_pago)
+    VALUES (@id_pedido, @fecha_pedido, @hora_pedido, @id_cliente, @id_mp, @id_empleado, @iden_pago);
+
+END;
+
+--SP PARA FACTURA
+
+CREATE PROCEDURE ddbba.insertarFactura
+		@id_factura VARCHAR(15),
+		@tipo_factura CHAR(1),
+		@id_pedido INT,
+		@fecha DATE
+AS
+BEGIN	
+		IF LEN(@id_factura) <= 0
+	BEGIN
+		PRINT 'Error: La cantidad de caracteres de id_factura debe ser mayor a 0';
+		RETURN;
+	END
+
+		IF LEN(@tipo_factura) != 1 
+	BEGIN
+		PRINT 'Error: tipo_factura debe ser 1 solo caracter.';
+		RETURN;
+	END
+	
+		IF id_pedido <= 0
+	BEGIN	
+		PRINT 'Error: id_pedido debe ser mayor que 0.';
+		RETURN;
+	END
+	INSERT INTO Factura VALUES (@id_factura,@tipo_factura,@id_pedido,@fecha);
+	PRINT 'Factura ingresada correctamente.';
+END
+
+
+--SP PARA MEDIO DE PAGO
+
+CREATE PROCEDURE ddbba.insertarMedioPago
+		@id_mp INT,
+		@tipo VARCHAR(50)
+AS
+BEGIN
+	IF @id_mp <= 0
+	BEGIN
+		PRINT 'id_mp debe ser mayor que 0.';
+		RETURN;
+	END
+		IF LEN(@tipo)<=0 OR LEN(@tipo)>50
+	BEGIN
+		PRINT 'tipo debe tener entre 1 y 50 caracteres.';
+		RETURN;
+	END
+	INSERT INTO MedioPago VALUES (@id_mp,@tipo);
+	PRINT 'Medio de Pago ingresado correctamente.';
+END
