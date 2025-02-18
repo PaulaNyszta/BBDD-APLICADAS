@@ -47,8 +47,6 @@ IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G0
 			dni VARCHAR(20),
 			turno VARCHAR(50),
 			cargo VARCHAR(50),
-			id_sucursal INT,
-			CONSTRAINT FKEmpleado FOREIGN KEY (id_sucursal) REFERENCES ddbba.Sucursal(id_sucursal)
 		);
 		PRINT 'Tabla Empelado creada correctamente.';
 	END
@@ -136,20 +134,17 @@ ELSE
 		PRINT 'La tabla MedioPago ya existe.';
 	END;
 go
-
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Pedido') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Pedido (
-			id_pedido INT PRIMARY KEY, 
+			id_pedido INT identity(1,1) PRIMARY KEY, 
 			fecha_pedido DATE,
 			hora_pedido DATETIME,
 			id_cliente INT,
 			id_mp INT,
-			id_empleado INT,
 			iden_pago VARCHAR(30), 
 			CONSTRAINT FKCliente FOREIGN KEY (id_cliente) REFERENCES ddbba.Cliente(id_cliente),
 			CONSTRAINT FKPedido1 FOREIGN KEY (id_mp) REFERENCES ddbba.MedioPago (id_mp),
-			CONSTRAINT FKPedido2 FOREIGN KEY (id_empleado) REFERENCES ddbba.Empleado (id_empleado)
 		); 
 		PRINT 'Tabla Pedido creada correctamente.';
 	END
@@ -158,7 +153,24 @@ ELSE
 		PRINT 'La tabla Pedido ya existe.';
 	END;
 go
-
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Venta') AND type = N'U')
+	BEGIN
+		CREATE TABLE ddbba.Venta (
+			id_pedido INT, 
+			id_sucursal INT,
+			id_empleado INT,
+			CONSTRAINT PKVenta PRIMARY KEY (id_sucursal, id_pedido),
+			CONSTRAINT FKVenta1 FOREIGN KEY (id_sucursal) REFERENCES ddbba.Sucursal (id_sucursal),
+			CONSTRAINT FKVenta2 FOREIGN KEY (id_pedido) REFERENCES ddbba.Pedido (id_pedido),
+			CONSTRAINT FKVenta3 FOREIGN KEY (id_empleado) REFERENCES ddbba.Empleado (id_empleado),
+		); 
+		PRINT 'Tabla Venta creada correctamente.';
+	END
+ELSE
+	BEGIN
+		PRINT 'La tabla Venta ya existe.';
+	END;
+go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Tiene') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Tiene (
@@ -180,7 +192,7 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Factura') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Factura (
-			id_factura VARCHAR(15),
+			id_factura VARCHAR(15) CHECK (id_factura LIKE '[0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9]'),
 			tipo_factura CHAR(3),
 			id_pedido INT,
 			fecha DATE,
@@ -194,76 +206,104 @@ ELSE
 		PRINT 'La tabla Factura ya existe.';
 	END;
 
-<<<<<<< HEAD
+---------------------------------------------SP---------------------------------------------------
 -- SP PARA CLIENTE
-
-
-CREATE PROCEDURE ddbba.insertarCliente
-    @id int,
-    @gen VARCHAR(50),
-    @tipo VARCHAR(50),
-	@ap VARCHAR(50),
-	@nom VARCHAR(50),
-	@fnac DATE 
+IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarCliente')
+BEGIN
+	DROP PROCEDURE ddbba.insertarCliente ;
+END;
+go
+CREATE PROCEDURE ddbba.insertarCliente(
+	@id_cliente int,
+	@genero VARCHAR(50),
+	@tipo VARCHAR(50),
+	@apellido VARCHAR(50),
+	@nombre VARCHAR(50),
+	@fnac DATE )
 AS
 BEGIN
-
-IF @id <= 0
-PRINT 'Error. Inserte un Id de Cliente mayor a 0';
-RETURN;
-
-END 
-    INSERT INTO Cliente
-    VALUES (@id,@gen,@tipo,@ap,@nom,@fnac);
-   
-   PRINT 'Cliente insertado correctamente';
+	-- Validación de id del cliente sea un numero positivo 
+	IF (@id_cliente <= 0)
+	BEGIN
+		PRINT 'Error. Inserte un Id de Cliente mayor a 0';
+		RETURN;
+	END;
+	-- Validación de id del cliente sea un numero unico 
+	IF EXISTS (SELECT 1 FROM ddbba.Cliente WHERE id_cliente = @id_cliente) 
+	BEGIN
+		PRINT'El Id del cliente ya existe';
+		RETURN;
+	END;
+	-- Validación del que el genero sea female o male
+	IF (@genero NOT IN ('Female', 'Male'))
+	BEGIN
+		PRINT 'Error. El género debe ser "Female" o "Male".';
+		RETURN;
+	END;
+	-- Validación del que el tipo de cliente sea Normal o Member
+	IF (@tipo NOT IN ('Normal', 'Member'))
+	BEGIN
+		PRINT 'Error. El tipo de cliente debe ser "Normal" o "Member".';
+		RETURN
+	END;
+	-- Validación de que la fecha de nacimiento no sea futura
+	IF (@fnac > GETDATE())
+	BEGIN
+		PRINT 'La fecha de alta no puede ser futura';
+		RETURN;
+	END;
+    
+	INSERT INTO ddbba.Cliente
+	VALUES (@id_cliente,@genero,@tipo,@apellido,@nombre,@fnac);
+	PRINT 'Cliente insertado correctamente';
 END;
-
-
+go
 
 -- SP PARA TABLA PEDIDO
-
-CREATE PROCEDURE ddbba.InsertarPedido
+IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarPedido')
+BEGIN
+	DROP PROCEDURE ddbba.insertarPedido ;
+END;
+go
+CREATE PROCEDURE ddbba.InsertarPedido(
     @id_pedido INT,
     @fecha_pedido DATE,
     @hora_pedido DATETIME,
     @id_cliente INT,
     @id_mp INT,
-    @id_empleado INT,
-    @iden_pago VARCHAR(30)
+    @iden_pago VARCHAR(30))
 AS
 BEGIN
-    IF @id_pedido <= 0
+    
+    --validadcion de la fecha del pedido no sea futura
+    IF (@fecha_pedido > GETDATE())
     BEGIN
-        PRINT 'Error: id_pedido debe ser mayor a 0';
+        PRINT 'Error: fecha del pedido no puede ser futura';
         RETURN;
-    END
-    
-    --IF @fecha_pedido < DATEADD(YEAR, -1, GETDATE())
-    --BEGIN
-        --PRINT 'Error: fecha_pedido no puede ser menor a un año';
-        --RETURN;
-    --END
-    
-    IF @id_cliente <= 0 OR @id_mp <= 0 OR @id_empleado <= 0
-    BEGIN
-        PRINT 'Error: id_cliente, id_mp e id_empleado deben ser mayores a 0';
-        RETURN;
-    END
-    
-    IF LEN(@iden_pago) = 0 OR LEN(@iden_pago) > 30
+    END;
+	 --validadcion de que el identificador de pago tenga entre 1 y 30 caracteres
+    IF (LEN(@iden_pago) = 0 OR LEN(@iden_pago) > 30)
     BEGIN
         PRINT 'Error: El iden_pago debe tener entre 1 y 30 caracteres.';
         RETURN;
-    END
-    
-    INSERT INTO ddbba.Pedido (id_pedido, fecha_pedido, hora_pedido, id_cliente, id_mp, id_empleado, iden_pago)
-    VALUES (@id_pedido, @fecha_pedido, @hora_pedido, @id_cliente, @id_mp, @id_empleado, @iden_pago);
-
+    END;
+    --validadcion de que el medio de pago exista
+    IF NOT EXISTS (SELECT 1 FROM ddbba.MedioPago WHERE id_mp = @id_mp)
+    BEGIN
+        PRINT 'Error: no existe el medio de pago';
+        RETURN;
+    END;
+    INSERT INTO ddbba.Pedido (id_pedido, fecha_pedido, hora_pedido, id_cliente, id_mp, iden_pago)
+    VALUES (@id_pedido, @fecha_pedido, @hora_pedido, @id_cliente, @id_mp, @iden_pago);
 END;
+go
 
 --SP PARA FACTURA
-
+IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarFactura')
+BEGIN
+	DROP PROCEDURE ddbba.insertarFactura ;
+END;
+go
 CREATE PROCEDURE ddbba.insertarFactura
 		@id_factura VARCHAR(15),
 		@tipo_factura CHAR(1),
@@ -271,90 +311,96 @@ CREATE PROCEDURE ddbba.insertarFactura
 		@fecha DATE
 AS
 BEGIN	
-		IF LEN(@id_factura) <= 0
-	BEGIN
-		PRINT 'Error: La cantidad de caracteres de id_factura debe ser mayor a 0';
-		RETURN;
-	END
-
-		IF LEN(@tipo_factura) != 1 
-	BEGIN
-		PRINT 'Error: tipo_factura debe ser 1 solo caracter.';
-		RETURN;
-	END
+		--verificacion de que el tipo de factura se A, B o C
+		IF (@tipo_factura NOT IN ('A','B','C'))
+			BEGIN
+				PRINT 'Error: tipo_factura debe ser A, B o C.';
+				RETURN;
+			END;
+		--validadcion de que el id pedido exista
+		IF NOT EXISTS (SELECT 1 FROM ddbba.Pedido WHERE id_pedido = @id_pedido)
+		BEGIN
+			PRINT 'Error: no existe el pedido';
+			RETURN;
+		END;	
 	
-		IF id_pedido <= 0
-	BEGIN	
-		PRINT 'Error: id_pedido debe ser mayor que 0.';
-		RETURN;
-	END
 	INSERT INTO Factura VALUES (@id_factura,@tipo_factura,@id_pedido,@fecha);
 	PRINT 'Factura ingresada correctamente.';
-END
-
+END;
+go
 
 --SP PARA MEDIO DE PAGO
-
+IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarMedioPago')
+BEGIN
+	DROP PROCEDURE ddbba.insertarMedioPago ;
+END;
+go
 CREATE PROCEDURE ddbba.insertarMedioPago
 		@id_mp INT,
 		@tipo VARCHAR(50)
 AS
 BEGIN
+	--validar que el id de medio de pago sea positivo
 	IF @id_mp <= 0
 	BEGIN
 		PRINT 'id_mp debe ser mayor que 0.';
 		RETURN;
-	END
-		IF LEN(@tipo)<=0 OR LEN(@tipo)>50
+	END;
+	--validar que el id de medio de pago no exisya
+	IF  EXISTS (SELECT 1 FROM ddbba.MedioPago WHERE id_mp = @id_mp)
+	BEGIN
+		PRINT 'id_mp ya existe';
+		RETURN;
+	END;
+	--validar que el tipo tenga entre 1 y 50 caracteres
+	IF LEN(@tipo)<=0 OR LEN(@tipo)>50
 	BEGIN
 		PRINT 'tipo debe tener entre 1 y 50 caracteres.';
 		RETURN;
-	END
+	END;
 	INSERT INTO MedioPago VALUES (@id_mp,@tipo);
 	PRINT 'Medio de Pago ingresado correctamente.';
-END
-=======
--------------------------------------INSERCION DE DATOS---------------------------------------------------
-CREATE PROCEDURE ddbba.insertar_sucursal (
+END;
+go
+--SP PARA SUCURSAL
+IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarSucursal')
+BEGIN
+	DROP PROCEDURE ddbba.insertarSucursal ;
+END;
+go
+CREATE PROCEDURE ddbba.insertarSucursal 
     @id_sucursal INT,
 	@localidad VARCHAR(100),
 	@direccion VARCHAR(255),
 	@horario VARCHAR(50),
 	@telefono VARCHAR(20)
-)
 AS
 BEGIN
-	 -- Validación de id_sucursal sea un numero positivo 
-	IF @id_sucursal < 0
-     BEGIN
-        RAISERROR('El Id de la sucursal debe ser un numero pisitivo', 16, 1);
-        RETURN;
-    END
-	-- Validación de id_sucursal sea un numero unico 
-	IF EXISTS (SELECT 1 FROM ddbba.Sucursal WHERE id_sucursal = @idSucursal) 
-	BEGIN
-		RAISERROR('El Id ya existe', 16, 1);
-        RETURN;
-    END
-    -- Validación de que la fecha de alta no sea futura
-    IF @fecha_alta > GETDATE()
-    BEGIN
-        RAISERROR('La fecha de alta no puede ser futura', 16, 1);
-        RETURN;
-    END
 
-    -- Insertar el nuevo empleado
-    INSERT INTO gestor_compras.Empleado (
-        id_empleado, fecha_alta, cuil, domicilio, apellido, nombre, email_personal, 
-        email_empresarial, telefono, dni, turno, cargo, id_sucursal
-    )
-    VALUES (
-        @id_empleado, @fecha_alta, @cuil, @domicilio, @apellido, @nombre, @email_personal,
-        @email_empresarial, @telefono, @dni, @turno, @cargo, @id_sucursal
-    );
+	-- Validación de id_sucursal sea un numero unico 
+	IF EXISTS (SELECT 1 FROM ddbba.Sucursal WHERE id_sucursal = @id_sucursal) 
+	BEGIN
+		PRINT 'id sucursal ya existente';
+        RETURN;
+    END
+    --validacion de que la localidad se Ramos Mejia, Lomas del Mirador o San Justo
+	IF (@localidad NOT IN ('Ramos Mejia','Lomas del Mirador','San Justo'))
+	BEGIN
+		PRINT 'la localidad debe ser Ramos Mejia,Lomas del Mirador o San Justo';
+		RETURN;
+	END;
+	--validar que el telefono tenga 9 caracteres
+	IF LEN(@telefono)!=9 
+	BEGIN
+		PRINT 'el telefono debe tener entre 9 caracteres.';
+		RETURN;
+	END;
     
-    PRINT 'Empleado insertado correctamente';
+    INSERT INTO ddbba.Sucursal (id_sucursal,localidad,direccion,horario,telefono)
+    VALUES (@id_sucursal,@localidad,@direccion,@horario,@telefono);
+    
+    PRINT 'Sucursal insertada correctamente';
 END;
 
 
->>>>>>> 0186150 (Agregado de SP)
+
