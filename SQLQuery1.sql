@@ -474,7 +474,6 @@ BEGIN
     PRINT 'Sucursal insertada correctamente';
 END;
 go
-
 --SP PARA PROVEEDOR
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarProveedor')
 BEGIN
@@ -486,15 +485,10 @@ CREATE PROCEDURE ddbba.insertarProveedor
     @nombre VARCHAR(255)
 AS
 BEGIN
-    -- Manejo de errores
-    BEGIN TRY
-        BEGIN TRANSACTION;
-
         -- Validar que el nombre no sea nulo ni vacío
         IF (@nombre IS NULL OR LTRIM(RTRIM(@nombre)) = '')
         BEGIN
             PRINT 'El nombre del proveedor no puede ser nulo o vacío.'
-            ROLLBACK TRANSACTION; -- Revierte cambios
             RETURN; -- Detiene la ejecucion
         END;
 
@@ -502,24 +496,14 @@ BEGIN
         IF EXISTS (SELECT 1 FROM ddbba.Proveedor WHERE id_proveedor = @id_proveedor)
         BEGIN
             PRINT 'El id_proveedor ya existe en la tabla Proveedor.'
-            ROLLBACK TRANSACTION;
             RETURN;
         END
 
         -- Insertar los datos en la tabla
         INSERT INTO ddbba.Proveedor (id_proveedor, nombre)
-        VALUES (@id_proveedor, @nombre);
-
-        -- Confirmar la transacción
-        COMMIT TRANSACTION;
+        VALUES (@id_proveedor, @nombre)
         PRINT 'Proveedor insertado correctamente.';
-    END TRY
-    BEGIN CATCH
-        -- Manejar cualquier error que ocurra
-        ROLLBACK TRANSACTION;
-        PRINT 'Ocurrió un error al intentar insertar el proveedor.';
-        THROW;
-    END CATCH
+ 
 END;
 go
 
@@ -536,60 +520,145 @@ CREATE PROCEDURE ddbba.InsertarProducto
 	@descripcion VARCHAR(255)
 AS
 BEGIN
-	BEGIN TRY
-		BEGIN TRANSACTION
 
 		IF EXISTS(SELECT 1 FROM ddbba.Producto WHERE id_producto= @id_producto)
 		BEGIN
 			PRINT 'El codigo del producto ya existe en la tabla'
-			ROLLBACK TRANSACTION
 			RETURN
 		END
 
 		IF (@id_producto <= 0)
 		BEGIN
 			PRINT 'El codigo del producto debe ser mayor a cero'
-			ROLLBACK TRANSACTION
 			RETURN
 		END
 
 		IF (@precio_unitario <= 0)
 		BEGIN
 			PRINT 'El precio del producto debe ser mayor a cero'
-			ROLLBACK TRANSACTION
 			RETURN
 		END
 
 		IF (@linea IS NULL OR LTRIM(RTRIM(@linea)) = '')
 		BEGIN
 			PRINT 'La linea del producto no debe ser nula'
-			ROLLBACK TRANSACTION
 			RETURN
 		END
 
 		IF (@descripcion IS NULL OR LTRIM(RTRIM(@descripcion)) = '')
 		BEGIN
 			PRINT 'La descripcion del producto no debe ser nula'
-			ROLLBACK TRANSACTION
 			RETURN
 		END
 
 		 -- Insertar los datos en la tabla
-        INSERT INTO Com1353G01.ddbba.Producto(id_producto, precio_unitario, linea, descripcion)
+        INSERT INTO ddbba.Producto(id_producto, precio_unitario, linea, descripcion)
         VALUES (@id_producto, @precio_unitario, @linea, @descripcion );
-
-        -- Confirmar la transacción
-        COMMIT TRANSACTION;
-        PRINT 'Producto insertado correctamente.';
-
-	END TRY
-
-	BEGIN CATCH
-		ROLLBACK TRANSACTION;
-        PRINT 'Ocurrió un error al intentar insertar el producto.';
-        THROW;
-	END CATCH
+		PRINT 'Producto insertado correctamente'
 END;
 go
+--SP PARA VENTA
+IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarVenta')
+BEGIN
+	DROP PROCEDURE ddbba.insertarVenta;
+END;
+go
+CREATE PROCEDURE ddbba.insertarVenta
+	@id_pedido INT, 
+	@id_sucursal INT,
+	@id_empleado INT
+AS
+BEGIN
+	--verificar que el pedido exista
+	IF NOT EXISTS (SELECT 1 FROM ddbba.Pedido WHERE id_pedido = @id_pedido)
+	BEGIN	
+		PRINT 'El Pedido no existe.';
+		RETURN;
+	END;
+	--verificar que la sucursal exista
+	IF NOT EXISTS (SELECT 1 FROM ddbba.Sucursal WHERE id_sucursal = @id_sucursal)
+	BEGIN	
+		PRINT 'La Sucursal no existe.';
+		RETURN;
+	END;
+	--verificar que el empleado exista
+	IF NOT EXISTS (SELECT 1 FROM ddbba.Empleado WHERE id_empleado = @id_empleado)
+	BEGIN	
+		PRINT 'El empleado no existe.';
+		RETURN;
+	END;
+
+INSERT INTO ddbba.Venta (id_pedido,id_sucursal,id_empleado) VALUES (@id_pedido,@id_sucursal,@id_empleado);
+PRINT 'Valores insertados correctamente'
+END;
+go
+--SP PARA TIENE
+IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'InsertarTiene')
+BEGIN
+	DROP PROCEDURE ddbba.insertarTiene;
+END;
+go
+CREATE PROCEDURE ddbba.InsertarTiene
+	@id_producto INT,
+	@id_pedido INT,
+	@cantidad INT
+AS
+
+BEGIN
+	--verificar si el producto existe
+	if NOT EXISTS (SELECT 1 FROM ddbba.Producto WHERE id_producto = @id_producto )
+	BEGIN
+		PRINT 'El producto no existe'
+		RETURN;
+	END;
+	--verificar que el pedido existe
+	if NOT EXISTS (SELECT 1 FROM ddbba.Pedido WHERE id_pedido = @id_pedido )
+	BEGIN
+		PRINT 'El pedido no existe'
+		RETURN;
+	END;
+	--verificar que la cantidad pedida es mayor a cero
+	if(@cantidad <= 0)
+	BEGIN 
+		PRINT 'La cantidad debe ser mayor a cero'
+		RETURN;
+	END;
+
+	INSERT INTO ddbba.Tiene(id_producto, id_pedido, cantidad)
+    VALUES (@id_producto, @id_pedido, @cantidad);
+	PRINT 'Valores insertados correctamente'
+END;
+go
+--SP PARA PROVEE
+IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarProvee')
+BEGIN
+	DROP PROCEDURE ddbba.insertarProvee;
+END;
+go
+CREATE PROCEDURE ddbba.insertarProvee(
+	@id_prov INT,
+	@id_prod INT)
+AS
+BEGIN
+	--verificar que el proveedor exista
+	IF NOT EXISTS (SELECT 1 FROM ddbba.Proveedor WHERE id_proveedor = @id_prov)
+	BEGIN	
+		PRINT 'El proveedor no existe.';
+		RETURN;
+	END;
+	--verificar que el producto exista
+	IF NOT EXISTS (SELECT 1 FROM ddbba.Producto WHERE id_producto = @id_prod)
+	BEGIN	
+		PRINT 'El producto no existe.';
+		RETURN;
+	END;
+
+INSERT INTO ddbba.Provee (id_proveedor,id_producto) VALUES (@id_prov,@id_prod);
+PRINT 'Valores insertados correctamente'
+END;
+go
+
+
+
 
 
