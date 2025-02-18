@@ -222,6 +222,7 @@ CREATE PROCEDURE ddbba.insertarCliente(
 	@fnac DATE )
 AS
 BEGIN
+<<<<<<< HEAD
 	-- Validación de id del cliente sea un numero positivo 
 	IF (@id_cliente <= 0)
 	BEGIN
@@ -256,21 +257,54 @@ BEGIN
 	INSERT INTO ddbba.Cliente
 	VALUES (@id_cliente,@genero,@tipo,@apellido,@nombre,@fnac);
 	PRINT 'Cliente insertado correctamente';
+=======
+
+IF @id <= 0
+PRINT 'Error. Inserte un Id de Cliente mayor a 0';
+RETURN;
+
+IF @gen != 'MALE' AND @gen != 'FEMALE'
+BEGIN 
+	PRINT 'Error. Genero incorrecto.'
+	RETURN;
+END
+
+IF @tipo !='Member' AND @tipo != 'Normal'
+BEGIN	
+	PRINT 'Error. Tipo de Cliente incorrecto.'
+	RETURN;
+END
+
+END 
+    INSERT INTO Cliente
+    VALUES (@id,@gen,@tipo,@ap,@nom,@fnac);
+   
+   PRINT 'Cliente insertado correctamente';
+>>>>>>> 65bbfbc57b9874fd6969fc6df53df4ebbe28c5b7
 END;
 go
 
 -- SP PARA TABLA PEDIDO
+<<<<<<< HEAD
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarPedido')
 BEGIN
 	DROP PROCEDURE ddbba.insertarPedido ;
 END;
 go
 CREATE PROCEDURE ddbba.InsertarPedido(
+=======
+
+CREATE PROCEDURE ddbba.InsertarPedido (
+>>>>>>> 65bbfbc57b9874fd6969fc6df53df4ebbe28c5b7
     @id_pedido INT,
     @fecha_pedido DATE,
     @hora_pedido DATETIME,
     @id_cliente INT,
     @id_mp INT,
+<<<<<<< HEAD
+=======
+    @id_empleado INT,
+>>>>>>> 65bbfbc57b9874fd6969fc6df53df4ebbe28c5b7
     @iden_pago VARCHAR(30))
 AS
 BEGIN
@@ -299,16 +333,21 @@ END;
 go
 
 --SP PARA FACTURA
+<<<<<<< HEAD
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarFactura')
 BEGIN
 	DROP PROCEDURE ddbba.insertarFactura ;
 END;
 go
 CREATE PROCEDURE ddbba.insertarFactura
+=======
+
+CREATE PROCEDURE ddbba.insertarFactura(
+>>>>>>> 65bbfbc57b9874fd6969fc6df53df4ebbe28c5b7
 		@id_factura VARCHAR(15),
-		@tipo_factura CHAR(1),
+		@tipo_factura CHAR(3),
 		@id_pedido INT,
-		@fecha DATE
+		@fecha DATE)
 AS
 BEGIN	
 		--verificacion de que el tipo de factura se A, B o C
@@ -330,14 +369,19 @@ END;
 go
 
 --SP PARA MEDIO DE PAGO
+<<<<<<< HEAD
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarMedioPago')
 BEGIN
 	DROP PROCEDURE ddbba.insertarMedioPago ;
 END;
 go
 CREATE PROCEDURE ddbba.insertarMedioPago
+=======
+
+CREATE PROCEDURE ddbba.insertarMedioPago(
+>>>>>>> 65bbfbc57b9874fd6969fc6df53df4ebbe28c5b7
 		@id_mp INT,
-		@tipo VARCHAR(50)
+		@tipo VARCHAR(50))
 AS
 BEGIN
 	--validar que el id de medio de pago sea positivo
@@ -360,6 +404,7 @@ BEGIN
 	END;
 	INSERT INTO MedioPago VALUES (@id_mp,@tipo);
 	PRINT 'Medio de Pago ingresado correctamente.';
+<<<<<<< HEAD
 END;
 go
 --SP PARA SUCURSAL
@@ -402,5 +447,115 @@ BEGIN
     PRINT 'Sucursal insertada correctamente';
 END;
 
+
+
+END
+
+--SP PARA PROVEEDOR
+CREATE PROCEDURE InsertarProveedor
+    @id_proveedor INT,
+    @nombre VARCHAR(255)
+AS
+BEGIN
+    -- Manejo de errores
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        -- Validar que el nombre no sea nulo ni vacío
+        IF (@nombre IS NULL OR LTRIM(RTRIM(@nombre)) = '')
+        BEGIN
+            PRINT 'El nombre del proveedor no puede ser nulo o vacío.'
+            ROLLBACK TRANSACTION; -- Revierte cambios
+            RETURN; -- Detiene la ejecucion
+        END
+
+        -- Validar que el id_proveedor no exista ya en la tabla
+        IF EXISTS (SELECT 1 FROM Com1353G01.ddbba.Proveedor WHERE id_proveedor = @id_proveedor)
+        BEGIN
+            PRINT 'El id_proveedor ya existe en la tabla Proveedor.'
+            ROLLBACK TRANSACTION;
+            RETURN;
+        END
+
+        -- Insertar los datos en la tabla
+        INSERT INTO Com1353G01.ddbba.Proveedor (id_proveedor, nombre)
+        VALUES (@id_proveedor, @nombre);
+
+        -- Confirmar la transacción
+        COMMIT TRANSACTION;
+        PRINT 'Proveedor insertado correctamente.';
+    END TRY
+    BEGIN CATCH
+        -- Manejar cualquier error que ocurra
+        ROLLBACK TRANSACTION;
+        PRINT 'Ocurrió un error al intentar insertar el proveedor.';
+        THROW;
+    END CATCH
+END;
+GO
+
+--SP PARA PRODUCTO
+CREATE PROCEDURE InsertarProducto
+	@id_producto INT,
+	@precio_unitario DECIMAL(10,2),
+	@linea VARCHAR(100),
+	@descripcion VARCHAR(255)
+AS
+BEGIN
+	BEGIN TRY
+		BEGIN TRANSACTION
+
+		IF EXISTS(SELECT 1 FROM Com1353G01.ddbba.Producto WHERE id_producto= @id_producto)
+		BEGIN
+			PRINT 'El codigo del producto ya existe en la tabla'
+			ROLLBACK TRANSACTION
+			RETURN
+		END
+
+		IF (@id_producto <= 0)
+		BEGIN
+			PRINT 'El codigo del producto debe ser mayor a cero'
+			ROLLBACK TRANSACTION
+			RETURN
+		END
+
+		IF (@precio_unitario <= 0)
+		BEGIN
+			PRINT 'El precio del producto debe ser mayor a cero'
+			ROLLBACK TRANSACTION
+			RETURN
+		END
+
+		IF (@linea IS NULL OR LTRIM(RTRIM(@linea)) = '')
+		BEGIN
+			PRINT 'La linea del producto no debe ser nula'
+			ROLLBACK TRANSACTION
+			RETURN
+		END
+
+		IF (@descripcion IS NULL OR LTRIM(RTRIM(@descripcion)) = '')
+		BEGIN
+			PRINT 'La descripcion del producto no debe ser nula'
+			ROLLBACK TRANSACTION
+			RETURN
+		END
+
+		 -- Insertar los datos en la tabla
+        INSERT INTO Com1353G01.ddbba.Producto(id_producto, precio_unitario, linea, descripcion)
+        VALUES (@id_producto, @precio_unitario, @linea, @descripcion );
+
+        -- Confirmar la transacción
+        COMMIT TRANSACTION;
+        PRINT 'Producto insertado correctamente.';
+
+	END TRY
+
+	BEGIN CATCH
+		ROLLBACK TRANSACTION;
+        PRINT 'Ocurrió un error al intentar insertar el producto.';
+        THROW;
+	END CATCH
+END;
+GO
 
 
