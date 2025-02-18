@@ -324,8 +324,119 @@ BEGIN
 	PRINT 'Medio de Pago ingresado correctamente.';
 END
 
+<<<<<<< HEAD
 DROP PROCEDURE ddbba.insertarMedioPago
 
 SELECT name
 FROM sys.procedures 
 
+=======
+--SP PARA PROVEEDOR
+CREATE PROCEDURE InsertarProveedor
+    @id_proveedor INT,
+    @nombre VARCHAR(255)
+AS
+BEGIN
+    -- Manejo de errores
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        -- Validar que el nombre no sea nulo ni vacío
+        IF (@nombre IS NULL OR LTRIM(RTRIM(@nombre)) = '')
+        BEGIN
+            PRINT 'El nombre del proveedor no puede ser nulo o vacío.'
+            ROLLBACK TRANSACTION; -- Revierte cambios
+            RETURN; -- Detiene la ejecucion
+        END
+
+        -- Validar que el id_proveedor no exista ya en la tabla
+        IF EXISTS (SELECT 1 FROM Com1353G01.ddbba.Proveedor WHERE id_proveedor = @id_proveedor)
+        BEGIN
+            PRINT 'El id_proveedor ya existe en la tabla Proveedor.'
+            ROLLBACK TRANSACTION;
+            RETURN;
+        END
+
+        -- Insertar los datos en la tabla
+        INSERT INTO Com1353G01.ddbba.Proveedor (id_proveedor, nombre)
+        VALUES (@id_proveedor, @nombre);
+
+        -- Confirmar la transacción
+        COMMIT TRANSACTION;
+        PRINT 'Proveedor insertado correctamente.';
+    END TRY
+    BEGIN CATCH
+        -- Manejar cualquier error que ocurra
+        ROLLBACK TRANSACTION;
+        PRINT 'Ocurrió un error al intentar insertar el proveedor.';
+        THROW;
+    END CATCH
+END;
+GO
+
+--SP PARA PRODUCTO
+CREATE PROCEDURE InsertarProducto
+	@id_producto INT,
+	@precio_unitario DECIMAL(10,2),
+	@linea VARCHAR(100),
+	@descripcion VARCHAR(255)
+AS
+BEGIN
+	BEGIN TRY
+		BEGIN TRANSACTION
+
+		IF EXISTS(SELECT 1 FROM Com1353G01.ddbba.Producto WHERE id_producto= @id_producto)
+		BEGIN
+			PRINT 'El codigo del producto ya existe en la tabla'
+			ROLLBACK TRANSACTION
+			RETURN
+		END
+
+		IF (@id_producto <= 0)
+		BEGIN
+			PRINT 'El codigo del producto debe ser mayor a cero'
+			ROLLBACK TRANSACTION
+			RETURN
+		END
+
+		IF (@precio_unitario <= 0)
+		BEGIN
+			PRINT 'El precio del producto debe ser mayor a cero'
+			ROLLBACK TRANSACTION
+			RETURN
+		END
+
+		IF (@linea IS NULL OR LTRIM(RTRIM(@linea)) = '')
+		BEGIN
+			PRINT 'La linea del producto no debe ser nula'
+			ROLLBACK TRANSACTION
+			RETURN
+		END
+
+		IF (@descripcion IS NULL OR LTRIM(RTRIM(@descripcion)) = '')
+		BEGIN
+			PRINT 'La descripcion del producto no debe ser nula'
+			ROLLBACK TRANSACTION
+			RETURN
+		END
+
+		 -- Insertar los datos en la tabla
+        INSERT INTO Com1353G01.ddbba.Producto(id_producto, precio_unitario, linea, descripcion)
+        VALUES (@id_producto, @precio_unitario, @linea, @descripcion );
+
+        -- Confirmar la transacción
+        COMMIT TRANSACTION;
+        PRINT 'Producto insertado correctamente.';
+
+	END TRY
+
+	BEGIN CATCH
+		ROLLBACK TRANSACTION;
+        PRINT 'Ocurrió un error al intentar insertar el producto.';
+        THROW;
+	END CATCH
+END;
+GO
+
+--..
+>>>>>>> 65bbfbc57b9874fd6969fc6df53df4ebbe28c5b7
