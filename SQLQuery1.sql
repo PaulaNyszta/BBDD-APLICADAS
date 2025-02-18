@@ -31,20 +31,17 @@ ELSE
 		PRINT 'La tabla Sucursal ya existe.';
 	END;
 go
-
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Empleado') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Empleado (
 			id_empleado INT PRIMARY KEY,
 			fecha_alta DATE,
-			cuil VARCHAR(11),
+			cuil VARCHAR(15),
 			domicilio VARCHAR(255),
 			apellido VARCHAR(100),
 			nombre VARCHAR(100),
 			email_personal VARCHAR(255),
 			email_empresarial VARCHAR(255),
-			telefono VARCHAR(20),
-			dni VARCHAR(20),
 			turno VARCHAR(50),
 			cargo VARCHAR(50),
 		);
@@ -55,7 +52,6 @@ ELSE
 		PRINT 'La tabla Empleado ya existe.';
 	END;
 go
-
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Proveedor') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba .Proveedor (
@@ -69,7 +65,6 @@ ELSE
 		PRINT 'La tabla Proveedor ya existe.';
 	END;
 go
-
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Producto') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Producto (
@@ -85,7 +80,6 @@ ELSE
 		PRINT 'La tabla Producto ya existe.';
 	END;
 go
-
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Provee') AND type = N'U')
 	BEGIN 
 		CREATE TABLE ddbba.Provee (
@@ -102,7 +96,6 @@ ELSE
 		PRINT 'La tabla Provee ya existe.';
 	END;
 go
-
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Cliente') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Cliente (
@@ -120,7 +113,6 @@ ELSE
 		PRINT 'La tabla Cliente ya existe.';
 	END;
 go
-
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.MedioPago') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.MedioPago (
@@ -188,7 +180,6 @@ ELSE
 		PRINT 'La tabla Tiene ya existe.';
 	END;
 go
-
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Factura') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Factura (
@@ -205,6 +196,7 @@ ELSE
 	BEGIN
 		PRINT 'La tabla Factura ya existe.';
 	END;
+go
 
 ---------------------------------------------SP---------------------------------------------------
 -- SP PARA CLIENTE
@@ -213,16 +205,16 @@ BEGIN
 	DROP PROCEDURE ddbba.insertarCliente ;
 END;
 go
-CREATE PROCEDURE ddbba.insertarCliente(
+CREATE PROCEDURE ddbba.insertarCliente
 	@id_cliente int,
 	@genero VARCHAR(50),
 	@tipo VARCHAR(50),
 	@apellido VARCHAR(50),
 	@nombre VARCHAR(50),
-	@fnac DATE )
+	@fnac DATE 
 AS
 BEGIN
-<<<<<<< HEAD
+
 	-- Validación de id del cliente sea un numero positivo 
 	IF (@id_cliente <= 0)
 	BEGIN
@@ -254,57 +246,80 @@ BEGIN
 		RETURN;
 	END;
     
-	INSERT INTO ddbba.Cliente
+	INSERT INTO ddbba.Cliente (id_cliente, genero, tipo, apellido,nombre,fecha_nac)
 	VALUES (@id_cliente,@genero,@tipo,@apellido,@nombre,@fnac);
 	PRINT 'Cliente insertado correctamente';
-=======
-
-IF @id <= 0
-PRINT 'Error. Inserte un Id de Cliente mayor a 0';
-RETURN;
-
-IF @gen != 'MALE' AND @gen != 'FEMALE'
-BEGIN 
-	PRINT 'Error. Genero incorrecto.'
-	RETURN;
-END
-
-IF @tipo !='Member' AND @tipo != 'Normal'
-BEGIN	
-	PRINT 'Error. Tipo de Cliente incorrecto.'
-	RETURN;
-END
-
-END 
-    INSERT INTO Cliente
-    VALUES (@id,@gen,@tipo,@ap,@nom,@fnac);
-   
-   PRINT 'Cliente insertado correctamente';
->>>>>>> 65bbfbc57b9874fd6969fc6df53df4ebbe28c5b7
 END;
 go
 
+-- SP PARA EMPLEADO
+IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarEmpleado')
+BEGIN
+	DROP PROCEDURE ddbba.insertarEmpleado ;
+END;
+go
+CREATE PROCEDURE ddbba.insertarEmpleado
+	@id_empleado INT,
+	@fecha_alta DATE,
+	@cuil VARCHAR(15),
+	@domicilio VARCHAR(255),
+	@apellido VARCHAR(100),
+	@nombre VARCHAR(100),
+	@email_personal VARCHAR(255),
+	@email_empresarial VARCHAR(255),
+	@turno VARCHAR(50),
+	@cargo VARCHAR(50)
+AS
+BEGIN
+
+	-- Validación de id del empleado sea unico
+	IF EXISTS (SELECT 1 FROM ddbba.Empleado WHERE id_empleado = @id_empleado)
+	BEGIN
+		PRINT 'Error. Id ya existente';
+		RETURN;
+	END;
+	-- Validación de id del empleado tenga 6 caracteres
+	IF LEN(@id_empleado) < 6
+	BEGIN
+		PRINT 'Error. Inserte un Id de Empleado con al menos 6 caracteres';
+		RETURN;
+	END;
+	-- Validación de que la fecha de alta no sea futura
+	IF (@fecha_alta > GETDATE())
+	BEGIN
+		PRINT 'La fecha de alta no puede ser futura';
+		RETURN;
+	END;
+	-- Validación de que el cuil tenga forma XX-XXXXXXXX-X
+	 IF @cuil NOT LIKE '[0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9]'
+    BEGIN
+        PRINT 'Error: El número de CUIL debe tener forma XX-XXXXXXXX-X';
+        RETURN;
+    END;
+	-- Validación de que el turno sea TM, TT o jornada completa
+	IF @turno NOT IN ('TT','TM','Jornada completa')
+	BEGIN
+		PRINT'El turno debe ser TT, TM, o Jornada completa';
+		RETURN;
+	END;
+    
+	INSERT INTO ddbba.Empleado (id_empleado,fecha_alta,cuil,domicilio,apellido,nombre,email_personal, email_empresarial,turno,cargo)
+	VALUES (@id_empleado,@fecha_alta,@cuil,@domicilio,@apellido,@nombre,@email_personal,@email_empresarial,@turno,@cargo);
+	PRINT 'Empleado insertado correctamente';
+END;
+go
 -- SP PARA TABLA PEDIDO
-<<<<<<< HEAD
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarPedido')
 BEGIN
 	DROP PROCEDURE ddbba.insertarPedido ;
 END;
 go
-CREATE PROCEDURE ddbba.InsertarPedido(
-=======
-
 CREATE PROCEDURE ddbba.InsertarPedido (
->>>>>>> 65bbfbc57b9874fd6969fc6df53df4ebbe28c5b7
     @id_pedido INT,
     @fecha_pedido DATE,
     @hora_pedido DATETIME,
     @id_cliente INT,
     @id_mp INT,
-<<<<<<< HEAD
-=======
-    @id_empleado INT,
->>>>>>> 65bbfbc57b9874fd6969fc6df53df4ebbe28c5b7
     @iden_pago VARCHAR(30))
 AS
 BEGIN
@@ -321,33 +336,23 @@ BEGIN
         PRINT 'Error: El iden_pago debe tener entre 1 y 30 caracteres.';
         RETURN;
     END;
-    --validadcion de que el medio de pago exista
-    IF NOT EXISTS (SELECT 1 FROM ddbba.MedioPago WHERE id_mp = @id_mp)
-    BEGIN
-        PRINT 'Error: no existe el medio de pago';
-        RETURN;
-    END;
+    
     INSERT INTO ddbba.Pedido (id_pedido, fecha_pedido, hora_pedido, id_cliente, id_mp, iden_pago)
     VALUES (@id_pedido, @fecha_pedido, @hora_pedido, @id_cliente, @id_mp, @iden_pago);
 END;
 go
 
 --SP PARA FACTURA
-<<<<<<< HEAD
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarFactura')
 BEGIN
 	DROP PROCEDURE ddbba.insertarFactura ;
 END;
 go
 CREATE PROCEDURE ddbba.insertarFactura
-=======
-
-CREATE PROCEDURE ddbba.insertarFactura(
->>>>>>> 65bbfbc57b9874fd6969fc6df53df4ebbe28c5b7
 		@id_factura VARCHAR(15),
 		@tipo_factura CHAR(3),
 		@id_pedido INT,
-		@fecha DATE)
+		@fecha DATE
 AS
 BEGIN	
 		--verificacion de que el tipo de factura se A, B o C
@@ -369,19 +374,14 @@ END;
 go
 
 --SP PARA MEDIO DE PAGO
-<<<<<<< HEAD
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarMedioPago')
 BEGIN
 	DROP PROCEDURE ddbba.insertarMedioPago ;
 END;
 go
 CREATE PROCEDURE ddbba.insertarMedioPago
-=======
-
-CREATE PROCEDURE ddbba.insertarMedioPago(
->>>>>>> 65bbfbc57b9874fd6969fc6df53df4ebbe28c5b7
 		@id_mp INT,
-		@tipo VARCHAR(50))
+		@tipo VARCHAR(50)
 AS
 BEGIN
 	--validar que el id de medio de pago sea positivo
@@ -404,7 +404,7 @@ BEGIN
 	END;
 	INSERT INTO MedioPago VALUES (@id_mp,@tipo);
 	PRINT 'Medio de Pago ingresado correctamente.';
-<<<<<<< HEAD
+
 END;
 go
 --SP PARA SUCURSAL
@@ -446,20 +446,17 @@ BEGIN
     
     PRINT 'Sucursal insertada correctamente';
 END;
+go
 
-
-
-END
-
-<<<<<<< HEAD
-DROP PROCEDURE ddbba.insertarMedioPago
-
-SELECT name
-FROM sys.procedures 
-
-=======
 --SP PARA PROVEEDOR
-CREATE PROCEDURE InsertarProveedor
+IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarProveedor')
+BEGIN
+	DROP PROCEDURE ddbba.insertarProveedor ;
+END;
+go
+
+-- SP PARA PROVEEDOR
+CREATE PROCEDURE ddbba.insertarProveedor
     @id_proveedor INT,
     @nombre VARCHAR(255)
 AS
@@ -474,10 +471,10 @@ BEGIN
             PRINT 'El nombre del proveedor no puede ser nulo o vacío.'
             ROLLBACK TRANSACTION; -- Revierte cambios
             RETURN; -- Detiene la ejecucion
-        END
+        END;
 
         -- Validar que el id_proveedor no exista ya en la tabla
-        IF EXISTS (SELECT 1 FROM Com1353G01.ddbba.Proveedor WHERE id_proveedor = @id_proveedor)
+        IF EXISTS (SELECT 1 FROM ddbba.Proveedor WHERE id_proveedor = @id_proveedor)
         BEGIN
             PRINT 'El id_proveedor ya existe en la tabla Proveedor.'
             ROLLBACK TRANSACTION;
@@ -485,7 +482,7 @@ BEGIN
         END
 
         -- Insertar los datos en la tabla
-        INSERT INTO Com1353G01.ddbba.Proveedor (id_proveedor, nombre)
+        INSERT INTO ddbba.Proveedor (id_proveedor, nombre)
         VALUES (@id_proveedor, @nombre);
 
         -- Confirmar la transacción
@@ -499,10 +496,15 @@ BEGIN
         THROW;
     END CATCH
 END;
-GO
+go
 
 --SP PARA PRODUCTO
-CREATE PROCEDURE InsertarProducto
+IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarProducto')
+BEGIN
+	DROP PROCEDURE ddbba.insertarProducto ;
+END;
+go
+CREATE PROCEDURE ddbba.InsertarProducto
 	@id_producto INT,
 	@precio_unitario DECIMAL(10,2),
 	@linea VARCHAR(100),
@@ -512,7 +514,7 @@ BEGIN
 	BEGIN TRY
 		BEGIN TRANSACTION
 
-		IF EXISTS(SELECT 1 FROM Com1353G01.ddbba.Producto WHERE id_producto= @id_producto)
+		IF EXISTS(SELECT 1 FROM ddbba.Producto WHERE id_producto= @id_producto)
 		BEGIN
 			PRINT 'El codigo del producto ya existe en la tabla'
 			ROLLBACK TRANSACTION
@@ -563,5 +565,37 @@ BEGIN
         THROW;
 	END CATCH
 END;
+go
+
+--SP PARA PROVEE
+
+IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarProvee')
+BEGIN
+	DROP PROCEDURE ddbba.insertarProvee;
+END;
+go
+CREATE PROCEDURE ddbba.insertarProvee(
+	@id_prov INT,
+	@id_prod INT)
+AS
+BEGIN
+	IF NOT EXISTS (SELECT 1 FROM ddbba.Proveedor WHERE id_proveedor = @id_prov)
+BEGIN	
+	PRINT 'El proveedor no existe.';
+	RETURN;
+END
+	IF NOT EXISTS (SELECT 1 FROM ddbba.Producto WHERE id_producto = @id_prod)
+BEGIN	
+	PRINT 'El producto no existe.';
+	RETURN;
+END
+
+INSERT INTO ddbba.Provee VALUES (@id_prov,@id_prod);
+
+END;
 GO
+
+
+
+
 
