@@ -323,3 +323,9 @@ BEGIN
 	INSERT INTO MedioPago VALUES (@id_mp,@tipo);
 	PRINT 'Medio de Pago ingresado correctamente.';
 END
+
+DROP PROCEDURE ddbba.insertarMedioPago
+
+SELECT name
+FROM sys.procedures 
+
