@@ -264,7 +264,7 @@ END;
 
 CREATE PROCEDURE ddbba.insertarFactura
 		@id_factura VARCHAR(15),
-		@tipo_factura CHAR(1),
+		@tipo_factura CHAR(3),
 		@id_pedido INT,
 		@fecha DATE
 AS
