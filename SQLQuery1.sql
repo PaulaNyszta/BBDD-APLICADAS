@@ -129,7 +129,7 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Pedido') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Pedido (
-			id_pedido INT identity(1,1) PRIMARY KEY, 
+			id_pedido INT  PRIMARY KEY, 
 			fecha_pedido DATE,
 			hora_pedido DATETIME,
 			id_cliente INT,
@@ -308,7 +308,7 @@ BEGIN
 	PRINT 'Empleado insertado correctamente';
 END;
 go
--- SP PARA TABLA PEDIDO
+-- SP PARA  PEDIDO
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarPedido')
 BEGIN
 	DROP PROCEDURE ddbba.insertarPedido ;
@@ -323,7 +323,17 @@ CREATE PROCEDURE ddbba.InsertarPedido (
     @iden_pago VARCHAR(30))
 AS
 BEGIN
-    
+	-- Validación de id del pedido sea un numero positivo 
+	IF (@id_pedido <= 0)
+	BEGIN
+		PRINT 'Error. Inserte un Id de pedido mayor a 0';
+		RETURN;
+	END;
+	-- Validación de id del pedido sea un numero unico 
+	IF EXISTS (SELECT 1 FROM ddbba.Pedido WHERE id_pedido = @id_pedido) 
+	BEGIN
+		PRINT'El Id del pedido ya existe';
+	END;    
     --validadcion de la fecha del pedido no sea futura
     IF (@fecha_pedido > GETDATE())
     BEGIN
@@ -355,6 +365,17 @@ CREATE PROCEDURE ddbba.insertarFactura
 		@fecha DATE
 AS
 BEGIN	
+		-- Validación de id de la factura cumpla con la forma XXX-XX-XXXX
+		IF (@id_factura  NOT LIKE '[0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9]')
+		BEGIN
+			PRINT 'Error. La el id de la factura no cumple con la forma XXX-XX-XXXX';
+			RETURN;
+		END;
+		-- Validación de id de la factura sea un numero unico 
+		IF EXISTS (SELECT 1 FROM ddbba.Factura WHERE id_factura = @id_factura) 
+		BEGIN
+			PRINT'El Id de la Factura ya existe';
+		END;    
 		--verificacion de que el tipo de factura se A, B o C
 		IF (@tipo_factura NOT IN ('A','B','C'))
 			BEGIN
@@ -365,6 +386,12 @@ BEGIN
 		IF NOT EXISTS (SELECT 1 FROM ddbba.Pedido WHERE id_pedido = @id_pedido)
 		BEGIN
 			PRINT 'Error: no existe el pedido';
+			RETURN;
+		END;	
+		--validadcion de que la fecha no sea futura
+		IF @fecha > GETDATE()
+		BEGIN
+			PRINT 'Error: la fecha no puede ser futura';
 			RETURN;
 		END;	
 	
