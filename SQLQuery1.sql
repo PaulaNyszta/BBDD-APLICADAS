@@ -210,6 +210,18 @@ IF @id <= 0
 PRINT 'Error. Inserte un Id de Cliente mayor a 0';
 RETURN;
 
+IF @gen != 'MALE' AND @gen != 'FEMALE'
+BEGIN 
+	PRINT 'Error. Genero incorrecto.'
+	RETURN;
+END
+
+IF @tipo !='Member' AND @tipo != 'Normal'
+BEGIN	
+	PRINT 'Error. Tipo de Cliente incorrecto.'
+	RETURN;
+END
+
 END 
     INSERT INTO Cliente
     VALUES (@id,@gen,@tipo,@ap,@nom,@fnac);
@@ -221,14 +233,14 @@ END;
 
 -- SP PARA TABLA PEDIDO
 
-CREATE PROCEDURE ddbba.InsertarPedido
+CREATE PROCEDURE ddbba.InsertarPedido (
     @id_pedido INT,
     @fecha_pedido DATE,
     @hora_pedido DATETIME,
     @id_cliente INT,
     @id_mp INT,
     @id_empleado INT,
-    @iden_pago VARCHAR(30)
+    @iden_pago VARCHAR(30))
 AS
 BEGIN
     IF @id_pedido <= 0
@@ -262,11 +274,11 @@ END;
 
 --SP PARA FACTURA
 
-CREATE PROCEDURE ddbba.insertarFactura
+CREATE PROCEDURE ddbba.insertarFactura(
 		@id_factura VARCHAR(15),
 		@tipo_factura CHAR(3),
 		@id_pedido INT,
-		@fecha DATE
+		@fecha DATE)
 AS
 BEGIN	
 		IF LEN(@id_factura) <= 0
@@ -293,9 +305,9 @@ END
 
 --SP PARA MEDIO DE PAGO
 
-CREATE PROCEDURE ddbba.insertarMedioPago
+CREATE PROCEDURE ddbba.insertarMedioPago(
 		@id_mp INT,
-		@tipo VARCHAR(50)
+		@tipo VARCHAR(50))
 AS
 BEGIN
 	IF @id_mp <= 0
