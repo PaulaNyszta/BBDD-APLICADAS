@@ -1,4 +1,4 @@
--- coemntario - fecha de entrega - número de comisión, número de grupo, nombre de la materia, nombres y DNI de los alumnos.
+-- Script de creacion - fecha de entrega - Com 1353 - Grupo 01 - Base de Datos Aplicadas, nombres y DNI de los alumnos.
 IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'Com1353G01')
 	BEGIN
 		CREATE DATABASE Com1353G01;
@@ -13,8 +13,9 @@ IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'ddbba')
 		PRINT ' Schema creado exitosamente';
 	END;
 go
+ --CREACION DE TABLAS-----------
 
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Sucursal') AND type = N'U')
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Sucursal') AND type = N'U') -- 'U' tabla creada por el usuario 'N' es q sea unicode
 	BEGIN
 		CREATE TABLE ddbba.Sucursal (
 			id_sucursal INT PRIMARY KEY,
@@ -190,9 +191,10 @@ IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G0
 	END
 ELSE
 	BEGIN
-		PRINT 'La tabla Fcatura ya existe.';
+		PRINT 'La tabla Factura ya existe.';
 	END;
 
+<<<<<<< HEAD
 -- SP PARA CLIENTE
 
 
@@ -311,3 +313,48 @@ BEGIN
 	INSERT INTO MedioPago VALUES (@id_mp,@tipo);
 	PRINT 'Medio de Pago ingresado correctamente.';
 END
+=======
+-------------------------------------INSERCION DE DATOS---------------------------------------------------
+CREATE PROCEDURE ddbba.insertar_sucursal (
+    @id_sucursal INT,
+	@localidad VARCHAR(100),
+	@direccion VARCHAR(255),
+	@horario VARCHAR(50),
+	@telefono VARCHAR(20)
+)
+AS
+BEGIN
+	 -- Validación de id_sucursal sea un numero positivo 
+	IF @id_sucursal < 0
+     BEGIN
+        RAISERROR('El Id de la sucursal debe ser un numero pisitivo', 16, 1);
+        RETURN;
+    END
+	-- Validación de id_sucursal sea un numero unico 
+	IF EXISTS (SELECT 1 FROM ddbba.Sucursal WHERE id_sucursal = @idSucursal) 
+	BEGIN
+		RAISERROR('El Id ya existe', 16, 1);
+        RETURN;
+    END
+    -- Validación de que la fecha de alta no sea futura
+    IF @fecha_alta > GETDATE()
+    BEGIN
+        RAISERROR('La fecha de alta no puede ser futura', 16, 1);
+        RETURN;
+    END
+
+    -- Insertar el nuevo empleado
+    INSERT INTO gestor_compras.Empleado (
+        id_empleado, fecha_alta, cuil, domicilio, apellido, nombre, email_personal, 
+        email_empresarial, telefono, dni, turno, cargo, id_sucursal
+    )
+    VALUES (
+        @id_empleado, @fecha_alta, @cuil, @domicilio, @apellido, @nombre, @email_personal,
+        @email_empresarial, @telefono, @dni, @turno, @cargo, @id_sucursal
+    );
+    
+    PRINT 'Empleado insertado correctamente';
+END;
+
+
+>>>>>>> 0186150 (Agregado de SP)
