@@ -1,5 +1,5 @@
 -- Script de pruebas
-
+Use Com1353G01
 -- prueba para SP insertarSucursal, Ejecute los siguientes juegos de prueba y luego el SELECT para ver los resultados
 -- datos invalidos
 EXEC ddbba.insertarSucursal
@@ -42,18 +42,23 @@ SELECT * FROM ddbba.Proveedor WHERE id_proveedor = 90000; --observe que el prove
 --prueba para SP insertarProducto, Ejecute los siguientes juegos de prueba y  luego el SELECT para ver los resultados
 -- datos invalidos
 EXEC ddbba.insertarProducto
-	0,-1,'','' --debe dar error el id
+	0,-1,'','descrip',-1,kg,'2030-09-01' --debe dar error el id
 EXEC ddbba.insertarProducto
-	90000,-1,'','' --debe dar error el precio
+	90000,-1,'','descrip',-1,kg,'2030-09-01'--debe dar error el precio
 EXEC ddbba.insertarProducto
-	90000,1,'','' --debe dar error la linea
+	90000,1,'','descrip',-1,kg,'2030-09-01'--debe dar error la linea
 EXEC ddbba.insertarProducto
-	90000,1,'bebida','' --debe dar error la descrpcion
+	90000,1,'bebida','descrip',-1,kg,'2030-09-01' --debe dar error el precio de referencia
 EXEC ddbba.insertarProducto
-	90000,1,'bebida','muy rica' --debe insertarse el producto correctamente
+	90000,1,'bebida','descrip',1,kg,'2030-09-01' --debe dar error la fecha
 EXEC ddbba.insertarProducto
-	90000,1,'bebida','muy rica' --debe dar error el id
+	90000,1,'bebida','descrip',1,kg,'2020-09-01' --debe insertarse correctamnete los datos
+EXEC ddbba.insertarProducto
+	90000,1,'bebida','descrip',1,kg,'2020-09-01' --debe encontrar el producto con el mismo id, lo actualizara
 SELECT * FROM ddbba.Producto WHERE id_producto = 90000 --observe que el producto fue agregado exitosamente
+EXEC ddbba.insertarProducto
+	90000,1000,'bebida','descrip',1000,kg,'2020-09-01' --actualicemos sus precios
+SELECT * FROM ddbba.Producto WHERE id_producto = 90000 --observe que el precio se actualizo
 
 -- prueba para SP insertarProvee, Ejecute los siguientes juegos de prueba y  luego el SELECT para ver los resultados
 -- datos invalidos
