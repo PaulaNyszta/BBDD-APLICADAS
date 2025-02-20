@@ -69,9 +69,12 @@ IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G0
 	BEGIN
 		CREATE TABLE ddbba.Producto (
 			id_producto INT PRIMARY KEY,
-			precio_unitario DECIMAL(10, 2),
 			linea VARCHAR(100),
-			descripcion VARCHAR(255)
+			descripcion NVARCHAR(255),
+			precio_unitario DECIMAL(10, 2),
+			precio_referencia  decimal (10,2),
+			unidad varchar(10),
+			fecha datetime,
 		);
 		PRINT 'Tabla Producto creada correctamente.';
 	END
@@ -198,7 +201,7 @@ ELSE
 	END;
 go
 
----------------------------------------------SP---------------------------------------------------
+---------------------------------------------SP--------------------------------------------------------------------
 -- SP PARA CLIENTE
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarCliente')
 BEGIN
@@ -508,52 +511,65 @@ END;
 go
 
 --SP PARA PRODUCTO
+
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarProducto')
 BEGIN
 	DROP PROCEDURE ddbba.insertarProducto ;
 END;
 go
-CREATE PROCEDURE ddbba.InsertarProducto
+CREATE PROCEDURE ddbba.insertarProducto
 	@id_producto INT,
 	@precio_unitario DECIMAL(10,2),
 	@linea VARCHAR(100),
-	@descripcion VARCHAR(255)
+	@descripcion NVARCHAR(255),
+	@precio_referencia  decimal (10,2),
+	@unidad varchar(10),
+	@fecha datetime
 AS
 BEGIN
 
-		IF EXISTS(SELECT 1 FROM ddbba.Producto WHERE id_producto= @id_producto)
+		IF EXISTS(SELECT 1 FROM ddbba.Producto WHERE id_producto= @id_producto AND linea = @linea AND descripcion = @descripcion )
 		BEGIN
-			PRINT 'El codigo del producto ya existe en la tabla'
-			RETURN
-		END
+			PRINT 'El producto ya existe, se actualizara';
+			UPDATE ddbba.Producto
+				SET precio_referencia = @precio_referencia, precio_unitario = @precio_unitario
+				WHERE id_producto= @id_producto AND linea = @linea AND descripcion = @descripcion;
+			RETURN;
+		END;
 
 		IF (@id_producto <= 0)
 		BEGIN
-			PRINT 'El codigo del producto debe ser mayor a cero'
-			RETURN
-		END
+			PRINT 'El id del producto debe ser mayor a cero'
+			RETURN;
+		END;
 
 		IF (@precio_unitario <= 0)
 		BEGIN
 			PRINT 'El precio del producto debe ser mayor a cero'
-			RETURN
-		END
+			RETURN;
+		END;
 
 		IF (@linea IS NULL OR LTRIM(RTRIM(@linea)) = '')
 		BEGIN
 			PRINT 'La linea del producto no debe ser nula'
-			RETURN
-		END
+			RETURN;
+		END;
 
-		IF (@descripcion IS NULL OR LTRIM(RTRIM(@descripcion)) = '')
+		IF (@precio_referencia <= 0)
 		BEGIN
-			PRINT 'La descripcion del producto no debe ser nula'
-			RETURN
-		END
+			PRINT 'El precio de referencia debe ser mayor a cero'
+			RETURN;
+		END;
+
+		IF @fecha > GETDATE()
+		BEGIN
+			PRINT 'La fecha del producto no debe ser futura';
+			RETURN;
+		END;
 
 		 -- Insertar los datos en la tabla
-        INSERT INTO ddbba.Producto(id_producto, precio_unitario, linea, descripcion)
-        VALUES (@id_producto, @precio_unitario, @linea, @descripcion );
+        INSERT INTO ddbba.Producto(id_producto, precio_unitario, linea, descripcion,precio_referencia,unidad,fecha)
+        VALUES (@id_producto, @precio_unitario, @linea, @descripcion,@precio_referencia,@unidad,@fecha );
 		PRINT 'Producto insertado correctamente'
 END;
 go
