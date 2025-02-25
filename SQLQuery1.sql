@@ -18,7 +18,7 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Sucursal') AND type = N'U') -- 'U' tabla creada por el usuario 'N' es q sea unicode
 	BEGIN
 		CREATE TABLE ddbba.Sucursal (
-			id_sucursal INT PRIMARY KEY,
+			id_sucursal INT IDENTITY(1,1) PRIMARY KEY,
 			localidad VARCHAR(100),
 			direccion VARCHAR(255),
 			horario VARCHAR(50),
@@ -35,15 +35,17 @@ IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G0
 	BEGIN
 		CREATE TABLE ddbba.Empleado (
 			id_empleado INT PRIMARY KEY,
-			fecha_alta DATE,
 			cuil VARCHAR(15),
-			domicilio VARCHAR(255),
+			dni INT,
+			direccion VARCHAR(255),
 			apellido VARCHAR(100),
 			nombre VARCHAR(100),
 			email_personal VARCHAR(255),
 			email_empresarial VARCHAR(255),
 			turno VARCHAR(50),
 			cargo VARCHAR(50),
+			id_sucursal INT,
+			CONSTRAINT FKEmpleado FOREIGN KEY (id_sucursal) REFERENCES ddbba.Sucursal(id_sucursal), 
 		);
 		PRINT 'Tabla Empelado creada correctamente.';
 	END
@@ -76,7 +78,6 @@ IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G0
 			unidad varchar(10), --kg, ml, dolar
 			cantidadPorUnidad NVARCHAR(50),
 			moneda VARCHAR(7),
-			proveedor NVARCHAR(255),
 			fecha datetime,
 		);
 		PRINT 'Tabla Producto creada correctamente.';
@@ -266,15 +267,16 @@ END;
 go
 CREATE PROCEDURE ddbba.insertarEmpleado
 	@id_empleado INT,
-	@fecha_alta DATE,
 	@cuil VARCHAR(15),
-	@domicilio VARCHAR(255),
+	@dni INT,
+	@direccion VARCHAR(255),
 	@apellido VARCHAR(100),
 	@nombre VARCHAR(100),
 	@email_personal VARCHAR(255),
 	@email_empresarial VARCHAR(255),
 	@turno VARCHAR(50),
-	@cargo VARCHAR(50)
+	@cargo VARCHAR(50),
+	@id_sucursal INT
 AS
 BEGIN
 
@@ -284,18 +286,7 @@ BEGIN
 		PRINT 'Error. Id ya existente';
 		RETURN;
 	END;
-	-- Validación de id del empleado tenga 6 caracteres
-	IF LEN(@id_empleado) < 6
-	BEGIN
-		PRINT 'Error. Inserte un Id de Empleado con al menos 6 caracteres';
-		RETURN;
-	END;
-	-- Validación de que la fecha de alta no sea futura
-	IF (@fecha_alta > GETDATE())
-	BEGIN
-		PRINT 'La fecha de alta no puede ser futura';
-		RETURN;
-	END;
+
 	-- Validación de que el cuil tenga forma XX-XXXXXXXX-X
 	 IF @cuil NOT LIKE '[0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9]'
     BEGIN
@@ -308,9 +299,14 @@ BEGIN
 		PRINT'El turno debe ser TT, TM, o Jornada completa';
 		RETURN;
 	END;
-    
-	INSERT INTO ddbba.Empleado (id_empleado,fecha_alta,cuil,domicilio,apellido,nombre,email_personal, email_empresarial,turno,cargo)
-	VALUES (@id_empleado,@fecha_alta,@cuil,@domicilio,@apellido,@nombre,@email_personal,@email_empresarial,@turno,@cargo);
+    	-- Validación de que el id_sucursal exista
+	IF NOT EXISTS (SELECT 1 FROM ddbba.Sucursal	WHERE @id_sucursal = id_sucursal)
+	BEGIN
+		PRINT'El id_sucursal debe existir';
+		RETURN;
+	END;
+	INSERT INTO ddbba.Empleado (id_empleado,cuil,dni,direccion,apellido,nombre,email_personal, email_empresarial,turno,cargo,id_sucursal)
+	VALUES (@id_empleado,@cuil,@dni,@direccion,@apellido,@nombre,@email_personal,@email_empresarial,@turno,@cargo,@id_sucursal);
 	PRINT 'Empleado insertado correctamente';
 END;
 go
@@ -521,30 +517,16 @@ BEGIN
 END;
 go
 CREATE PROCEDURE ddbba.insertarProducto
-	@id_producto INT,
 	@precio_unitario DECIMAL(10,2),
 	@linea VARCHAR(100),
 	@descripcion NVARCHAR(255),
 	@precio_referencia  decimal (10,2),
 	@unidad varchar(10),
+	@cantidadPorUnidad NVARCHAR(50),
+	@moneda VARCHAR(7),
 	@fecha datetime
 AS
 BEGIN
-
-		IF EXISTS(SELECT 1 FROM ddbba.Producto WHERE id_producto= @id_producto AND linea = @linea AND descripcion = @descripcion )
-		BEGIN
-			PRINT 'El producto ya existe, se actualizara';
-			UPDATE ddbba.Producto
-				SET precio_referencia = @precio_referencia, precio_unitario = @precio_unitario
-				WHERE id_producto= @id_producto AND linea = @linea AND descripcion = @descripcion;
-			RETURN;
-		END;
-
-		IF (@id_producto <= 0)
-		BEGIN
-			PRINT 'El id del producto debe ser mayor a cero'
-			RETURN;
-		END;
 
 		IF (@precio_unitario <= 0)
 		BEGIN
@@ -571,8 +553,8 @@ BEGIN
 		END;
 
 		 -- Insertar los datos en la tabla
-        INSERT INTO ddbba.Producto(id_producto, precio_unitario, linea, descripcion,precio_referencia,unidad,fecha)
-        VALUES (@id_producto, @precio_unitario, @linea, @descripcion,@precio_referencia,@unidad,@fecha );
+        INSERT INTO ddbba.Producto( precio_unitario, linea, descripcion,precio_referencia,unidad,fecha)
+        VALUES ( @precio_unitario, @linea, @descripcion,@precio_referencia,@unidad,@fecha );
 		PRINT 'Producto insertado correctamente'
 END;
 go
