@@ -1,40 +1,52 @@
 Use Com1353G01
 -----------------------------------------------------------------------------------------------------------------------
 -- Procedimiento para importar Electronic accessories.xlsx
-CREATE PROCEDURE Importar_ElectronicAccessories
-   @RutaArchivo NVARCHAR(255)
-AS
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_ElectronicAccessories') 
 BEGIN
-    SET NOCOUNT ON;
-
-	  -- Importar datos desde Excel
-    DECLARE @SQL NVARCHAR(MAX);
-    SET @SQL ='
-    INSERT INTO ddbba.Producto (descripcion, precio_unitario, moneda)
-    SELECT Product, [Precio Unitario en dolares], ''dolar''
-    FROM OPENROWSET(''Microsoft.ACE.OLEDB.12.0'',
-        ''Excel 12.0;Database=' + @RutaArchivo + ';HDR=YES'',
-        ''SELECT [Product], [Precio Unitario en dolares] FROM [Sheet1$]'')
-		WHERE [Product] NOT IN (SELECT descripcion FROM ddbba.Producto)';
-    
-    EXEC sp_executesql @SQL; --consultas dinamicas
+	 DROP PROCEDURE Importar_ElectronicAccessories;
+	 PRINT 'SP Importar_ElectronicAccessories ya existe -- > se borro';
 END;
 go
+CREATE PROCEDURE Importar_ElectronicAccessories
+	@RutaArchivo NVARCHAR(255)
+AS
+BEGIN
+
+		-- Importar datos desde Excel
+	DECLARE @SQL NVARCHAR(MAX);
+	SET @SQL ='
+	INSERT INTO ddbba.Producto (descripcion, precio_unitario, moneda)
+	SELECT Product, [Precio Unitario en dolares], ''dolar''
+	FROM OPENROWSET(''Microsoft.ACE.OLEDB.12.0'',
+		''Excel 12.0;Database=' + @RutaArchivo + ';HDR=YES'',
+		''SELECT [Product], [Precio Unitario en dolares] FROM [Sheet1$]'')
+		WHERE [Product] NOT IN (SELECT descripcion FROM ddbba.Producto)';
+	EXEC sp_executesql @SQL; --consultas dinamicas
+END;
+go
+PRINT 'SP Importar_ElectronicAccessories se creo exitosamente';
+go
 --ejecutar el Store procedure
-EXEC Importar_ElectronicAccessories 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Electronic accessories.xlsx'
---fijarse
-SELECT * FROM ddbba.Producto
---borrar el SP
-DROP PROCEDURE Importar_ElectronicAccessories
+EXEC Importar_ElectronicAccessories 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Electronic accessories.xlsx';
+go
+----fijarse
+--SELECT * FROM ddbba.Producto
+----borrar el SP
+--DROP PROCEDURE Importar_ElectronicAccessories
 --para solucionar error 7099, 7050 Win+R -->services.msc -->SQL Server (SQLEXPRESS)--> propiedades-->iniciar sesion-->cabiar a "Cuenta del sistema local", Marca la casilla "Permitir que el servicio interactúe con el escritorio".
 
 ------------------------------------------------------------------------------------
 -- Procedimiento para importar Productos_importados.xlsx
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_Productos_importados') 
+BEGIN
+	 DROP PROCEDURE Importar_Productos_importados;
+	 PRINT 'SP Importar_Productos_importados ya existe -- > se borro';
+END;
+go
 CREATE PROCEDURE Importar_Productos_importados
     @RutaArchivo NVARCHAR(255)
 AS
 BEGIN
-    SET NOCOUNT ON;
     
     DECLARE @SQL NVARCHAR(MAX);
     SET @SQL ='
@@ -47,21 +59,30 @@ BEGIN
     
     EXEC sp_executesql @SQL;
 END;
+go
+PRINT 'SP Importar_Productos_importados se creo exitosamente';
+go
 
 --ejecutar el Store procedure
-EXEC Importar_Productos_importados 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Productos_importados.xlsx'
---fijarse
-SELECT * FROM ddbba.Producto
---borrar el SP
-DROP PROCEDURE Importar_Productos_importados
+EXEC Importar_Productos_importados 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Productos_importados.xlsx';
+go
+----fijarse
+--SELECT * FROM ddbba.Producto
+----borrar el SP
+--DROP PROCEDURE Importar_Productos_importados
 
 ---------------------------------------------------------------------------------------------
 -- Procedimiento para importar catalogo.csv
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_Catalogo') 
+BEGIN
+	 DROP PROCEDURE Importar_Catalogo;
+	 PRINT 'SP Importar_Catalogo ya existe -- > se borro';
+END;
+go
 CREATE PROCEDURE Importar_Catalogo
     @RutaArchivo NVARCHAR(255)
 AS
 BEGIN
-    SET NOCOUNT ON;
 
 	 DECLARE @SQL NVARCHAR(MAX);
 		SET @SQL = '
@@ -95,21 +116,24 @@ BEGIN
 		
 		EXEC sp_executesql @SQL;
 END;
-GO
+go
+PRINT 'SP Importar_Catalogo se creo exitosamente';
+go
 
 --ejecutar el Store procedure
-EXEC Importar_Catalogo 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\catalogo.csv'
---fijarse
-SELECT * FROM ddbba.Producto
---borrar el SP
-DROP PROCEDURE Importar_Catalogo
+EXEC Importar_Catalogo 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\catalogo.csv';
+go
+----fijarse
+--SELECT * FROM ddbba.Producto
+----borrar el SP
+--DROP PROCEDURE Importar_Catalogo
 
 
 
 
 
 
-
+/*
 SELECT * FROM ddbba.Producto
 --borrar tablas
 	 DROP TABLE ddbba.Factura
@@ -122,5 +146,5 @@ SELECT * FROM ddbba.Producto
 	DROP TABLE ddbba.Producto
 	DROP TABLE ddbba.Proveedor
 	DROP TABLE ddbba.Empleado
-	DROP TABLE ddbba.Sucursal
+	DROP TABLE ddbba.Sucursal*/
 
