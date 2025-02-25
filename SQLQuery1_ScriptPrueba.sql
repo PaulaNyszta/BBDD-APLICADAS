@@ -16,17 +16,17 @@ SELECT * FROM ddbba.Sucursal WHERE id_sucursal = 90000; --observe que la sucursa
 --prueba para SP insertarEmpleado, Ejecute los siguientes juegos de prueba y  luego el SELECT para ver los resultados
 -- datos invalidos
 EXEC ddbba.insertarEmpleado
-    11111,'2030-01-01','11-11111111-','Av','Gomez','Pedro','GP@','GP@','T','Sup'; --debe dar error el id
+    11111,'11-11111111-','Av','Gomez','Pedro','GP@','GP@','T','Sup',1; --debe dar error el id
 EXEC ddbba.insertarEmpleado
-    900000,'2030-01-01','11-11111111-','Av','Gomez','Pedro','GP@','GP@','T','Sup'; --debe dar error la fecha
+    900000,'11-11111111-','Av','Gomez','Pedro','GP@','GP@','T','Sup',1; --debe dar error en el cuil
 EXEC ddbba.insertarEmpleado
-    900000,'2019-01-01','11-11111111-','Av','Gomez','Pedro','GP@','GP@','T','Sup'; --debe dar error en el cuil
+    900000,'11-11111111-1','Av','Gomez','Pedro','GP@','GP@','T','Sup',1; --debe dar error en el turno
 EXEC ddbba.insertarEmpleado
-    900000,'2019-01-01','11-11111111-1','Av','Gomez','Pedro','GP@','GP@','T','Sup'; --debe dar error en el turno
+    900000,'11-11111111-1','Av','Gomez','Pedro','GP@','GP@','TT','Sup',1; --debe dar error en el id_sucu
 EXEC ddbba.insertarEmpleado
-    900000,'2019-01-01','11-11111111-1','Av','Gomez','Pedro','GP@','GP@','TT','Sup'; --debe insertarse el empleado correctamente
+    900000,'11-11111111-1','Av','Gomez','Pedro','GP@','GP@','TT','Sup',90000; --debe insertarse el empleado correctamente
 EXEC ddbba.insertarEmpleado
-    900000,'2019-01-01','11-11111111-1','Av','Gomez','Pedro','GP@','GP@','TT','Sup'; --debe dar error en id
+    900000,'11-11111111-1','Av','Gomez','Pedro','GP@','GP@','TT','Sup',90000; --debe dar error en id
 SELECT * FROM ddbba.Empleado WHERE id_empleado = 900000; --observe que el empleado fue agregado exitosamente
 
 --prueba para SP insertarProveedor, Ejecute los siguientes juegos de prueba y  luego el SELECT para ver los resultados
@@ -168,5 +168,11 @@ DELETE FROM ddbba.Venta WHERE id_pedido = 90000 AND id_sucursal = 90000 AND id_e
 DELETE FROM ddbba.Tiene WHERE id_pedido= 90000 AND id_producto = 90000;
 DELETE FROM ddbba.Factura WHERE id_factura= '900-00-0000' ;
 
-
+--ENTREGA N4
+-- prueba para SP Electronic accessories.xlsx,
+--observe que si ponemos una ruta invalida, no dejara cargar los datos
+EXEC Importar_ElectronicAccessories 'Electronic accessories.xlsx';
+--agregamos una ruta valida y ejecutamos
+EXEC Importar_ElectronicAccessories 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Electronic accessories.xlsx';
+--si el archivo ya fue agregado anteriormente y queremos volver a cargar los mismo productos no se modificara (0 rows affected) ya que no permite ingresar productos con el mismo nombre
 
