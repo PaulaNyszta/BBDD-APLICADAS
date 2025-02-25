@@ -68,12 +68,15 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Producto') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Producto (
-			id_producto INT PRIMARY KEY,
-			linea VARCHAR(100),
-			descripcion NVARCHAR(255),
+			id_producto INT IDENTITY(1,1) PRIMARY KEY,
+			descripcion NVARCHAR(255), --nombre,
+			linea VARCHAR(100), --categoria
 			precio_unitario DECIMAL(10, 2),
 			precio_referencia  decimal (10,2),
-			unidad varchar(10),
+			unidad varchar(10), --kg, ml, dolar
+			cantidadPorUnidad NVARCHAR(50),
+			moneda VARCHAR(7),
+			proveedor NVARCHAR(255),
 			fecha datetime,
 		);
 		PRINT 'Tabla Producto creada correctamente.';
