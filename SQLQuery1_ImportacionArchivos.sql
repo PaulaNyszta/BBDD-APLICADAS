@@ -57,17 +57,12 @@ BEGIN
 	DROP TABLE #Temp;
 END;
 go
-PRINT 'SP Importar_ElectronicAccessories se creo exitosamente';
-go
+
 --ejecutar el Store procedure
 EXEC Importar_ElectronicAccessories 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Electronic accessories.xlsx';
 go
 ----fijarse
---SELECT * FROM ddbba.Producto
-SELECT * FROM #Temp
-DROP TABLE #Temp
-----borrar el SP
---DROP PROCEDURE Importar_ElectronicAccessories
+SELECT * FROM ddbba.Producto
 --para solucionar error 7099, 7050 Win+R -->services.msc -->SQL Server (SQLEXPRESS)--> propiedades-->iniciar sesion-->cabiar a "Cuenta del sistema local", Marca la casilla "Permitir que el servicio interactúe con el escritorio".
 
 ------------------------------------------------------------------------------------
@@ -136,7 +131,7 @@ BEGIN
 		FROM ddbba.Proveedor
 		WHERE @proveedor = nombre
 
-		EXEC ddbba.insertarprovee
+		EXEC ddbba.insertarProvee
 			@id_proveedor,
 			@id --id de producto
 
@@ -158,8 +153,6 @@ select * from ddbba.Proveedor
 select * from ddbba.Provee
 ----borrar el SP
 --DROP PROCEDURE Importar_Productos_importados
-
-EXEC Borrar
 
 
 
@@ -315,7 +308,7 @@ BEGIN
 		IF @localidad IN ('Naypyitaw')
 			SET @localidad='Ramos Mejia';
 		IF @localidad IN ('Mandalay')
-			SET @localidad='Lomas del Mirador';
+			SET @localidad='Lomas del Mirador';		
 		
 		EXEC ddbba.insertarSucursal
 			@localidad,
@@ -339,7 +332,7 @@ BEGIN
 		email_empresarial VARCHAR(255),
 		turno VARCHAR(50),
 		cargo VARCHAR(50),
-		sucursal VARCHAR(20)
+		sucursal VARCHAR(100)
 		)
 		
     --ingreso de EMPLEADOS
@@ -365,7 +358,7 @@ BEGIN
 		@email_empresarial VARCHAR(255),
 		@turno VARCHAR(50),
 		@cargo VARCHAR(50),
-		@sucursal VARCHAR(20),
+		@sucursal VARCHAR(100),
 		@id_sucursal_emp INT,
 		@cuil VARCHAR(15)
 
@@ -410,15 +403,13 @@ BEGIN
 	DROP TABLE #Temp_empleado;
 
 END; --fin SP
-
+go
 --ejecutar el Store procedure
 EXEC Importar_Informacion_complementaria 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx';
 go
 ----fijarse
+SELECT * FROM ddbba.Sucursal
 SELECT * FROM ddbba.Empleado
-----borrar el SP
---DROP PROCEDURE Importar_Informacion_complementaria
-
 -------------------------------------------------------------------------------------------------------------------------------------------------
 -------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -436,34 +427,14 @@ BEGIN
 	EXEC ddbba.insertarMedioPago 'Cash';
 	EXEC ddbba.insertarMedioPago 'Ewallet';
 END;
-
---ejecutar el sp Insertar_MediosDePago
-EXEC Insertar_MediosDePago;
---fijarse 
-SELECT * FROM ddbba.MedioPago
-
--- Procedimiento para insertar los datos en PROVEE
-IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Insertar_Provee') 
-BEGIN
-	 DROP PROCEDURE Insertar_Provee;
-	 PRINT 'SP Insertar_Provee ya existe -- > se borro';
-END;
 go
-CREATE PROCEDURE Insertar_Provee
-AS
-BEGIN
-	DECLARE 
-	SELECT p.id_prod, p.id_prov
-	FROM ddbba.Provee p
-	INNER JOIN ddbba.Producto pd ON p.id_prod = pd.id_producto
-	INNER JOIN ddbba.Proveedor prov ON p.id_prov = pd.id_pro
-END;
 
 --ejecutar el sp Insertar_MediosDePago
 EXEC Insertar_MediosDePago;
 --fijarse 
 SELECT * FROM ddbba.MedioPago
 
+--------------------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------
 -- Procedimiento para importar Ventas_registradas.csv
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_Ventas_registradas') 
@@ -480,69 +451,170 @@ BEGIN
 
     --crear tabla temporal para cargar los datos de la venta
 	CREATE TABLE #Temp (
-				id int identity(1,1),
+				id INT IDENTITY(1,1),
 				id_factura VARCHAR(15),
+				tipo_factura CHAR(2),
 				localidad VARCHAR(100),
 				tipo VARCHAR(50), --tipo de cliente
 				genero VARCHAR(10),
-				nombre_producto  VARCHAR(100),
+				nombre_producto  NVARCHAR(100),
 				precio_unitario DECIMAL(10, 2),
 				cantidad INT,
 				fecha DATE,
 				hora TIME,
-				tipo_mp VARCHAR(10), --tipo
+				tipo_mp VARCHAR(50), --tipo
 				id_empleado INT,
-				iden_pago VARCHAR(30)
+				iden_pago VARCHAR(50)
 			)
 	
-		SET @SQL =' 
-    INSERT INTO #Temp (id_factura,localidad,tipo,genero,nombre_producto,precio_unitario,cantidad,fecha,hora,tipo_mp,id_empleado,iden_pago)
-    SELECT [Legajo/ID],[Nombre],[Apellido],[DNI],[Direccion],[email personal],[email empresa],[Turno],[Cargo],[Sucursal]
+		SET @SQL = ' 
+		BULK INSERT #Temp
+		FROM ''' + @RutaArchivo + '''
+		WITH (
+			FORMAT = ''CSV'',
+			FIRSTROW = 2,
+			FIELDTERMINATOR = ''\t'',
+			ROWTERMINATOR = ''0X0a'',
+			CODEPAGE = ''65001'',
+			TABLOCK
+		);';
+	/*
+	SET @SQL ='
+    INSERT INTO #Temp (id_factura,tipo_factura,localidad,tipo,genero,nombre_producto,precio_unitario,cantidad,fecha,hora,tipo_mp,id_empleado,iden_pago)
+    SELECT [ID Factura],[Tipo de Factura],[Ciudad],[Tipo de cliente],[Genero],CAST([Producto]AS NVARCHAR),[Precio Unitario],[Cantidad],ddbba.NormalizarFecha([Fecha]),[hora],[Medio de Pago],[Empleado],[Identificador de pago]  --metemos la funcion de fecha para cambiar lo que esta desorganizado
     FROM OPENROWSET(''Microsoft.ACE.OLEDB.12.0'',
         ''Excel 12.0;Database=' + @RutaArchivo + ';HDR=YES'',
-        ''SELECT [Legajo/ID],[Nombre],[Apellido],[DNI],[Direccion],[email personal],[email empresa],[Turno],[Cargo],[Sucursal] FROM [Empleados$]'')';
-
-    EXEC sp_executesql @SQL;
-
-	--crear tabla temporal para cargar los datos de la clasificacion de archivos
-	CREATE TABLE #Temp_clasificacion (
-				linea_clasificacion VARCHAR(50),
-				tipo_producto VARCHAR(50)
-			)
-    
-		SET @SQL =' 
-    INSERT INTO #Temp_clasificacion (linea_clasificacion, tipo_producto)
-    SELECT [Línea de producto],[Producto]
-    FROM OPENROWSET(''Microsoft.ACE.OLEDB.12.0'',
-        ''Excel 12.0;Database=' + @RutaArchivoClasificacion + ';HDR=YES'',
-        ''SELECT [Línea de producto],[Producto] FROM [Clasificacion productos$]'')';
-		EXEC sp_executesql @SQL;
+        ''SELECT [ID Factura],[Tipo de Factura],[Ciudad],[Tipo de cliente],[Genero],[Producto],[Precio Unitario],[Cantidad],[Fecha],[hora],[Medio de Pago],[Empleado],[Identificador de pago] FROM [Ventas_registradas$]'')';
+		
+    EXEC sp_executesql @SQL;*/
 
 	--paso el contenido de #temp como parametros para sp insertarproducto
 	DECLARE @contador INT = 1, @totalFilas INT;
 	SELECT @totalFilas = COUNT(*) FROM #Temp;
 
-	WHILE @contador <= @totalFilas
+	--generacion  de nombres aleatorios para cliente
+	DECLARE @nombres TABLE (nombre VARCHAR(50));
+	DECLARE @apellidos TABLE (apellido VARCHAR(50));
+	DECLARE @nombre VARCHAR(50), @apellido VARCHAR(50)
+	 -- Insertamos algunos nombres y apellidos en las tablas temporales
+	INSERT INTO @nombres VALUES ('Juan'), ('María'), ('Carlos'), ('Ana'), ('Pedro'), ('Laura'), ('Luis'), ('Sofía');
+	 INSERT INTO @apellidos VALUES ('Gomez'), ('Perez'), ('Lopez'), ('Fernandez'), ('Martinez'), ('Rodriguez'), ('Sanchez'), ('Diaz');
+
+	WHILE @contador <= @totalFilas --while
 	BEGIN
-		DECLARE  @id INT, @nombre_producto VARCHAR(100), @linea VARCHAR(50), @precio_unitario DECIMAL(10,2), @precio_referencia DECIMAL(10,2), @unidad VARCHAR(10), @fecha DATETIME, @moneda VARCHAR(7)
+		DECLARE
+				@id INT,
+				@id_factura VARCHAR(15),
+				@tipo_factura CHAR(1),
+				@localidad VARCHAR(100),
+				@tipo VARCHAR(50), --tipo de cliente
+				@genero VARCHAR(10),
+				@nombre_producto  VARCHAR(100),
+				@precio_unitario DECIMAL(10, 2),
+				@cantidad INT,
+				@fecha DATE,
+				@hora TIME,
+				@tipo_mp VARCHAR(10), --tipo
+				@id_empleado INT,
+				@iden_pago VARCHAR(30)
 		SELECT
-			@id = id, @nombre_producto = nombre_producto, @precio_unitario = precio_unitario, @precio_referencia = precio_referencia,@unidad = unidad,@fecha = fecha
+				@id = id, --UN ID POR CADA PEDIDO REALIZADO
+				@id_factura = id_factura,
+				@tipo_factura = tipo_factura,
+				@localidad = localidad,
+				@tipo = tipo, --tipo de cliente
+				@genero = genero,
+				@nombre_producto = nombre_producto,
+				@precio_unitario = precio_unitario,
+				@cantidad = cantidad,
+				@fecha = fecha,
+				@hora = hora,
+				@tipo_mp = tipo_mp, --tipo
+				@id_empleado = id_empleado,
+				@iden_pago = iden_pago
 		FROM #Temp WHERE id = @contador;
 
-		--que la categoria del archivo coincida con la categorias de los productos
-		SELECT TOP 1 @linea = linea_clasificacion
-		FROM #Temp T inner join #Temp_clasificacion TC on T.linea=TC.tipo_producto
-		WHERE id = @contador;
+		--insertar los datos en la tabla correspondiente CLIENTE
+		--creamos tipos de clientes alatorios ya que no sabemos de que tipo son
+		DECLARE @tipo_cliente VARCHAR(10)
+		IF (RAND() < 0.5)
+		BEGIN
+		 SET @tipo_cliente = 'Member' ;
+		END;
+		ELSE 
+		BEGIN
+			SET @tipo_cliente = 'Normal' ;
+		END;
 
-		EXEC ddbba.insertarProducto 
-			@nombre_producto,
-			@precio_unitario, --precio unitario
-			@linea, --linea
-			@precio_referencia, --precio ref
-			@unidad, --unidad
-			'', --cantxunidad
-			'ARS', --moneda
-			@fecha --fecha
+		--creamos nombre y apellidos aleatorios
+		
+		 --guardamos los datos del clientes
+		 SELECT TOP 1 @nombre = nombre FROM @nombres ORDER BY NEWID();
+		 SELECT TOP 1 @apellido = apellido  FROM @apellidos ORDER BY NEWID();
+		 
+		 --creamos fechas de nacimiento alateorias
+		 DECLARE @fnac DATETIME;
+		SET @fnac = DATEADD(DAY, -ABS(CHECKSUM(NEWID()) % 18250), GETDATE()); --18250 son los ultimos 50 anios
+
+		EXEC ddbba.insertarCliente
+			@id, --id cliente
+			@genero,
+			@tipo_cliente,
+			@apellido,
+			@nombre,
+			@fnac
+
+		--insertar los datos en la tabla correspondiente PEDIDO
+		--pasar de tipo de mp a su id
+		DECLARE @id_mp int
+		SELECT @id_mp = id_mp
+		FROM ddbba.MedioPago
+		WHERE @tipo_mp = tipo
+		
+		EXEC ddbba.insertarPedido
+			@fecha,
+			@hora,
+			@id, --id_cliente
+			@id_mp, --precio ref
+			@iden_pago
+
+
+		--insertar los datos en la tabla correspondiente VENTA	
+		DECLARE @id_sucursal INT
+		--reemplazo las ciudades
+		IF @localidad IN ('Yangon')
+			SET @localidad='San Justo';
+		IF @localidad IN ('Naypyitaw')
+			SET @localidad='Ramos Mejia';
+		IF @localidad IN ('Mandalay')
+			SET @localidad='Lomas del Mirador';			
+
+		SELECT @id_sucursal = id_sucursal
+		FROM ddbba.Sucursal
+		WHERE @localidad = localidad;
+
+		EXEC ddbba.insertarVenta
+			@id, --id pedido
+			@id_sucursal,
+			@id_empleado --id empleado
+
+		--insertar los datos en la tabla correspondiente TIENE	
+		DECLARE @id_producto INT
+		SELECT @id_producto = id_producto
+		FROM ddbba.Producto Pro
+		WHERE @nombre_producto = Pro.nombre_producto
+
+		EXEC ddbba.insertarTiene
+			@id_producto,
+			@id, --id pedido
+			@cantidad
+
+		--insertar los datos en la tabla correspondiente FACTURA	
+		EXEC ddbba.insertarFactura
+			@id_factura,
+			@tipo_factura,
+			@id, --id pedido
+			@fecha
 
 		SET @contador = @contador + 1;
 	END;
@@ -551,24 +623,51 @@ BEGIN
 
 END;
 go
-
 --ejecutar el Store procedure
-EXEC Importar_Catalogo '"C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Ventas_registradas.csv"'
+EXEC Importar_Ventas_registradas 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Ventas_registradas.csv'
 go
 
 
+--fijarse
+SELECT * FROM ddbba.Pedido
+SELECT  * FROM ddbba.Cliente
+SELECT * FROM ddbba.Venta
+SELECT * FROM ddbba.Tiene
+SELECT * FROM ddbba.Factura
 
 
 
 
+CREATE TABLE #Temp (
+				id INT IDENTITY(1,1),
+				id_factura VARCHAR(15),
+				tipo_factura CHAR(2),
+				localidad VARCHAR(100),
+				tipo VARCHAR(50), --tipo de cliente
+				genero VARCHAR(10),
+				nombre_producto  NVARCHAR(100),
+				precio_unitario DECIMAL(10, 2),
+				cantidad INT,
+				fecha DATE,
+				hora TIME,
+				tipo_mp VARCHAR(50), --tipo
+				id_empleado INT,
+				iden_pago VARCHAR(50)
+			)
+		--DECLARE @SQL NVARCHAR(MAX);
+		--SET @SQL = ' 
+		BULK INSERT #Temp
+		FROM 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Ventas_registradas.csv'
+		WITH (
+			FIRSTROW = 2,
+			FIELDTERMINATOR = '0x09',
+			ROWTERMINATOR = '0X0A',
+			CODEPAGE = '65001',
+			TABLOCK
+		);--';
 
-
-
-
-
-
-
-
+SELECT * FROM #Temp
+DROP TABLE #Temp
 SELECT * FROM ddbba.Producto
 --borrar tablas
 CREATE PROCEDURE Borrar
@@ -588,4 +687,27 @@ BEGIN
 END;	
 
 
+
+
+CREATE FUNCTION ddbba.NormalizarFecha (@FechaExcel VARCHAR(50))
+RETURNS DATE
+AS
+BEGIN
+    DECLARE @FechaFinal DATE;
+
+    -- Verifica si el valor es un número (indica que es una fecha numérica de Excel)
+    IF ISNUMERIC(@FechaExcel) = 1
+    BEGIN
+        -- Convierte el número de días desde 1899-12-30 a una fecha
+         SET @FechaFinal = DATEADD(DAY, CAST(@FechaExcel AS INT), '1899-12-30');
+    END
+    ELSE
+    BEGIN
+        -- Intenta convertirlo desde formato MM/DD/YYYY a DATE
+        SET @FechaFinal = TRY_CONVERT(DATE, @FechaExcel, 101);
+    END
+
+    RETURN @FechaFinal;
+END;
+GO
 
