@@ -601,8 +601,8 @@ BEGIN
 END;
 go
 CREATE PROCEDURE ddbba.InsertarTiene
-	@id_producto INT,
 	@id_pedido INT,
+	@id_producto INT,
 	@cantidad INT
 AS
 

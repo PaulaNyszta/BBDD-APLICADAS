@@ -247,7 +247,7 @@ go
 EXEC Importar_Catalogo 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\catalogo.csv', 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx'
 go
 ----fijarse
---SELECT * FROM ddbba.Producto
+SELECT * FROM ddbba.Producto
 
 
 
@@ -450,8 +450,7 @@ BEGIN
 	DECLARE @SQL NVARCHAR(MAX);
 
     --crear tabla temporal para cargar los datos de la venta
-	CREATE TABLE #Temp (
-				id INT IDENTITY(1,1),
+	CREATE TABLE #TempImport (
 				id_factura VARCHAR(15),
 				tipo_factura CHAR(2),
 				localidad VARCHAR(100),
@@ -468,25 +467,39 @@ BEGIN
 			)
 	
 		SET @SQL = ' 
-		BULK INSERT #Temp
+		BULK INSERT #TempImport
 		FROM ''' + @RutaArchivo + '''
 		WITH (
-			FORMAT = ''CSV'',
 			FIRSTROW = 2,
-			FIELDTERMINATOR = ''\t'',
+			FIELDTERMINATOR = '';'',
 			ROWTERMINATOR = ''0X0a'',
 			CODEPAGE = ''65001'',
 			TABLOCK
 		);';
-	/*
-	SET @SQL ='
-    INSERT INTO #Temp (id_factura,tipo_factura,localidad,tipo,genero,nombre_producto,precio_unitario,cantidad,fecha,hora,tipo_mp,id_empleado,iden_pago)
-    SELECT [ID Factura],[Tipo de Factura],[Ciudad],[Tipo de cliente],[Genero],CAST([Producto]AS NVARCHAR),[Precio Unitario],[Cantidad],ddbba.NormalizarFecha([Fecha]),[hora],[Medio de Pago],[Empleado],[Identificador de pago]  --metemos la funcion de fecha para cambiar lo que esta desorganizado
-    FROM OPENROWSET(''Microsoft.ACE.OLEDB.12.0'',
-        ''Excel 12.0;Database=' + @RutaArchivo + ';HDR=YES'',
-        ''SELECT [ID Factura],[Tipo de Factura],[Ciudad],[Tipo de cliente],[Genero],[Producto],[Precio Unitario],[Cantidad],[Fecha],[hora],[Medio de Pago],[Empleado],[Identificador de pago] FROM [Ventas_registradas$]'')';
-		
-    EXEC sp_executesql @SQL;*/
+		    EXEC sp_executesql @SQL;
+
+		--creo la tabla para que tenga el id identity
+		CREATE TABLE #Temp (
+		id INT IDENTITY(1,1),
+		id_factura VARCHAR(15),
+		tipo_factura CHAR(2),
+		localidad VARCHAR(100),
+		tipo VARCHAR(50), 
+		genero VARCHAR(10),
+		nombre_producto NVARCHAR(100),
+		precio_unitario DECIMAL(10, 2),
+		cantidad INT,
+		fecha DATE,
+		hora TIME,
+		tipo_mp VARCHAR(50),
+		id_empleado INT,
+		iden_pago VARCHAR(50)
+	);
+	INSERT INTO #Temp (
+		id_factura, tipo_factura, localidad, tipo, genero, nombre_producto, 
+		precio_unitario, cantidad, fecha, hora, tipo_mp, id_empleado, iden_pago
+	)
+	SELECT * FROM #TempImport;
 
 	--paso el contenido de #temp como parametros para sp insertarproducto
 	DECLARE @contador INT = 1, @totalFilas INT;
@@ -514,7 +527,7 @@ BEGIN
 				@cantidad INT,
 				@fecha DATE,
 				@hora TIME,
-				@tipo_mp VARCHAR(10), --tipo
+				@tipo_mp VARCHAR(50), --tipo
 				@id_empleado INT,
 				@iden_pago VARCHAR(30)
 		SELECT
@@ -566,18 +579,24 @@ BEGIN
 
 		--insertar los datos en la tabla correspondiente PEDIDO
 		--pasar de tipo de mp a su id
+		IF @tipo_mp IN ('Credit card')
+			SET @tipo_mp = 'Tarjeta de credito';
+		IF @tipo_mp IN ('Cash')
+			SET @tipo_mp = 'Efectivo';
+		IF @tipo_mp IN ('Ewallet')
+			SET @tipo_mp = 'Billetera Electronica';
+
 		DECLARE @id_mp int
-		SELECT @id_mp = id_mp
-		FROM ddbba.MedioPago
-		WHERE @tipo_mp = tipo
-		
+		SELECT @id_mp = M.id_mp
+		FROM ddbba.MedioPago M
+		WHERE @tipo_mp = M.tipo
+
 		EXEC ddbba.insertarPedido
 			@fecha,
 			@hora,
 			@id, --id_cliente
-			@id_mp, --precio ref
+			@id_mp, 
 			@iden_pago
-
 
 		--insertar los datos en la tabla correspondiente VENTA	
 		DECLARE @id_sucursal INT
@@ -605,8 +624,8 @@ BEGIN
 		WHERE @nombre_producto = Pro.nombre_producto
 
 		EXEC ddbba.insertarTiene
-			@id_producto,
 			@id, --id pedido
+			@id_producto,
 			@cantidad
 
 		--insertar los datos en la tabla correspondiente FACTURA	
@@ -625,9 +644,6 @@ END;
 go
 --ejecutar el Store procedure
 EXEC Importar_Ventas_registradas 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Ventas_registradas.csv'
-go
-
-
 --fijarse
 SELECT * FROM ddbba.Pedido
 SELECT  * FROM ddbba.Cliente
@@ -636,39 +652,23 @@ SELECT * FROM ddbba.Tiene
 SELECT * FROM ddbba.Factura
 
 
-
-
-CREATE TABLE #Temp (
-				id INT IDENTITY(1,1),
-				id_factura VARCHAR(15),
-				tipo_factura CHAR(2),
-				localidad VARCHAR(100),
-				tipo VARCHAR(50), --tipo de cliente
-				genero VARCHAR(10),
-				nombre_producto  NVARCHAR(100),
-				precio_unitario DECIMAL(10, 2),
-				cantidad INT,
-				fecha DATE,
-				hora TIME,
-				tipo_mp VARCHAR(50), --tipo
-				id_empleado INT,
-				iden_pago VARCHAR(50)
-			)
-		--DECLARE @SQL NVARCHAR(MAX);
-		--SET @SQL = ' 
-		BULK INSERT #Temp
-		FROM 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Ventas_registradas.csv'
-		WITH (
-			FIRSTROW = 2,
-			FIELDTERMINATOR = '0x09',
-			ROWTERMINATOR = '0X0A',
-			CODEPAGE = '65001',
-			TABLOCK
-		);--';
-
-SELECT * FROM #Temp
-DROP TABLE #Temp
 SELECT * FROM ddbba.Producto
+
+
+--EJECUTAR
+EXEC Importar_ElectronicAccessories 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Electronic accessories.xlsx';
+GO
+EXEC Importar_Productos_importados 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Productos_importados.xlsx';
+GO
+EXEC Importar_Catalogo 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\catalogo.csv', 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx'
+GO
+EXEC Importar_Informacion_complementaria 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx';
+GO
+EXEC Insertar_MediosDePago;
+GO
+EXEC Importar_Ventas_registradas 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Ventas_registradas.csv'
+
+
 --borrar tablas
 CREATE PROCEDURE Borrar
 AS
@@ -688,7 +688,7 @@ END;
 
 
 
-
+--------------------------------------------
 CREATE FUNCTION ddbba.NormalizarFecha (@FechaExcel VARCHAR(50))
 RETURNS DATE
 AS
@@ -710,4 +710,7 @@ BEGIN
     RETURN @FechaFinal;
 END;
 GO
+
+
+
 
