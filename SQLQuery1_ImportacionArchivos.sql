@@ -27,7 +27,7 @@ go
 PRINT 'SP Importar_ElectronicAccessories se creo exitosamente';
 go
 --ejecutar el Store procedure
-EXEC Importar_ElectronicAccessories 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Electronic accessories.xlsx';
+EXEC Importar_ElectronicAccessories 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Productos\Electronic accessories.xlsx';
 go
 ----fijarse
 --SELECT * FROM ddbba.Producto
@@ -64,7 +64,7 @@ PRINT 'SP Importar_Productos_importados se creo exitosamente';
 go
 
 --ejecutar el Store procedure
-EXEC Importar_Productos_importados 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Productos_importados.xlsx';
+EXEC Importar_Productos_importados 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Productos\Productos_importados.xlsx';
 go
 ----fijarse
 --SELECT * FROM ddbba.Producto
@@ -121,7 +121,7 @@ PRINT 'SP Importar_Catalogo se creo exitosamente';
 go
 
 --ejecutar el Store procedure
-EXEC Importar_Catalogo 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\catalogo.csv';
+EXEC Importar_Catalogo 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Productos\catalogo.csv';
 go
 ----fijarse
 --SELECT * FROM ddbba.Producto
@@ -148,3 +148,10 @@ SELECT * FROM ddbba.Producto
 	DROP TABLE ddbba.Empleado
 	DROP TABLE ddbba.Sucursal*/
 
+	EXEC sp_configure 'show advanced options', 1;
+RECONFIGURE;
+EXEC sp_configure 'Ad Hoc Distributed Queries', 1;
+RECONFIGURE;
+
+EXEC sp_MSset_oledb_prop N'Microsoft.ACE.OLEDB.12.0', N'AllowInProcess', 1;
+EXEC sp_MSset_oledb_prop N'Microsoft.ACE.OLEDB.12.0', N'DynamicParameters', 1;
