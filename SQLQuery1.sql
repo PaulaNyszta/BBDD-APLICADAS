@@ -106,7 +106,7 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Cliente') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Cliente (
-			id_cliente INT IDENTITY(1,1) PRIMARY KEY,
+			id_cliente INT PRIMARY KEY,
 			genero VARCHAR(10),
 			tipo VARCHAR(10),
 			apellido VARCHAR(100),
@@ -136,12 +136,12 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Pedido') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Pedido (
-			id_pedido INT  PRIMARY KEY, 
+			id_pedido INT IDENTITY(1,1) PRIMARY KEY, 
 			fecha_pedido DATE,
-			hora_pedido DATETIME,
+			hora_pedido TIME,
 			id_cliente INT,
 			id_mp INT,
-			iden_pago VARCHAR(30), 
+			iden_pago VARCHAR(50), 
 			CONSTRAINT FKCliente FOREIGN KEY (id_cliente) REFERENCES ddbba.Cliente(id_cliente),
 			CONSTRAINT FKPedido1 FOREIGN KEY (id_mp) REFERENCES ddbba.MedioPago (id_mp),
 		); 
@@ -205,6 +205,12 @@ ELSE
 	END;
 go
 
+ALTER TABLE ddbba.Factura
+ADD estado VARCHAR(20) DEFAULT 'PAGADA' NOT NULL;
+
+SELECT * FROM ddbba.Factura
+
+
 ---------------------------------------------SP--------------------------------------------------------------------
 -- SP PARA CLIENTE
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarCliente')
@@ -213,6 +219,7 @@ BEGIN
 END;
 go
 CREATE PROCEDURE ddbba.insertarCliente
+	@id INT,
 	@genero VARCHAR(50),
 	@tipo VARCHAR(10),
 	@apellido VARCHAR(50),
@@ -241,8 +248,8 @@ BEGIN
 		RETURN;
 	END;
     
-	INSERT INTO ddbba.Cliente (genero, tipo, apellido,nombre,fecha_nac)
-	VALUES (@genero,@tipo,@apellido,@nombre,@fnac);
+	INSERT INTO ddbba.Cliente (id_cliente,genero, tipo, apellido,nombre,fecha_nac)
+	VALUES (@id,@genero,@tipo,@apellido,@nombre,@fnac);
 	PRINT 'Cliente insertado correctamente';
 END;
 go
@@ -312,10 +319,10 @@ END;
 go
 CREATE PROCEDURE ddbba.InsertarPedido (
     @fecha_pedido DATE,
-    @hora_pedido DATETIME,
+    @hora_pedido TIME,
     @id_cliente INT,
     @id_mp INT,
-    @iden_pago VARCHAR(30))
+    @iden_pago VARCHAR(50))
 AS
 BEGIN
 	
@@ -403,12 +410,7 @@ CREATE PROCEDURE ddbba.insertarMedioPago
 AS
 BEGIN
 
-	--validar que el medio de pago no exisya
-	IF  EXISTS (SELECT 1 FROM ddbba.MedioPago WHERE @tipo = tipo)
-	BEGIN
-		PRINT 'medio de pago ya existente';
-		RETURN;
-	END;
+
 	--validar que el medio de pago sea Credit card, Cash, Ewallet
 
 	IF  @tipo NOT IN ('Credit card','Cash','Ewallet')
@@ -418,12 +420,19 @@ BEGIN
 	END;
 	
 	--cambiamos el medio de pago a esp
-		IF @tipo IN ('Credir card')
+		IF @tipo IN ('Credit card')
 			SET @tipo = 'Tarjeta de credito';
 		IF @tipo IN ('Cash')
 			SET @tipo = 'Efectivo';
 		IF @tipo IN ('Ewallet')
 			SET @tipo = 'Billetera Electronica';
+
+	--validar que el medio de pago no exisya
+	IF  EXISTS (SELECT 1 FROM ddbba.MedioPago WHERE @tipo = tipo)
+	BEGIN
+		PRINT 'medio de pago ya existente';
+		RETURN;
+	END;
 
 	INSERT INTO MedioPago VALUES (@tipo);
 	PRINT 'Medio de Pago ingresado correctamente.';
@@ -598,8 +607,8 @@ BEGIN
 END;
 go
 CREATE PROCEDURE ddbba.InsertarTiene
-	@id_producto INT,
 	@id_pedido INT,
+	@id_producto INT,
 	@cantidad INT
 AS
 
@@ -651,12 +660,17 @@ BEGIN
 		PRINT 'El producto no existe.';
 		RETURN;
 	END;
+	--verificar que ya se haya agregado el proveedor con su producto
+	IF EXISTS (SELECT 1 FROM ddbba.Provee WHERE id_producto = @id_prod and id_proveedor=@id_prov)
+	BEGIN	
+		PRINT 'ya existe ese proveedor con el producto';
+		RETURN;
+	END;
 
 INSERT INTO ddbba.Provee (id_proveedor,id_producto) VALUES (@id_prov,@id_prod);
 PRINT 'Valores insertados correctamente'
 END;
 go
-
 
 
 
