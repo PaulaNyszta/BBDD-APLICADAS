@@ -39,7 +39,7 @@ IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G0
 			apellido VARCHAR(100),
 			dni INT,
 			direccion VARCHAR(255),
-			cuil VARCHAR(15),
+			cuil VARCHAR(200),
 			email_personal VARCHAR(255),
 			email_empresarial VARCHAR(255),
 			turno VARCHAR(50),
@@ -194,7 +194,7 @@ IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G0
 			tipo_factura CHAR(1),
 			id_pedido INT not null,
 			fecha DATE,
-			estado VARCHAR(10)
+			estado VARCHAR(10),
 			CONSTRAINT PKFactura PRIMARY KEY (id_factura, id_pedido),
 			CONSTRAINT FKFactura FOREIGN KEY (id_pedido) REFERENCES ddbba.Pedido(id_pedido),
 		);
@@ -257,7 +257,7 @@ END;
 go
 CREATE PROCEDURE ddbba.insertarEmpleado
 	@id_empleado INT,
-	@cuil VARCHAR(15),
+	@cuil VARCHAR(200),
 	@dni INT,
 	@direccion VARCHAR(255),
 	@apellido VARCHAR(100),

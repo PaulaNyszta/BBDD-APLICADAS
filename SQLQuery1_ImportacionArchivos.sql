@@ -698,6 +698,7 @@ EXEC Importar_Ventas_registradas 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE 
 CREATE PROCEDURE Borrar
 AS
 BEGIN
+	DROP TABLE ddbba.NotaCredito 
 	 DROP TABLE ddbba.Factura
 	DROP TABLE ddbba.Tiene
 	DROP TABLE ddbba.Venta
@@ -711,7 +712,6 @@ BEGIN
 	DROP TABLE ddbba.Sucursal
 END;	
 */
-
 
 
 
