@@ -1,4 +1,5 @@
--- Script de pruebas
+-- 2. CRIPT DE PRUEBAS - 28/02/2025 - Com 1353 - Grupo 01 - Base de Datos Aplicadas, BARRIONUEVO LUCIANO [45429539], NYSZTA PAULA [45129511].
+
 Use Com1353G01
 -- prueba para SP insertarSucursal, Ejecute los siguientes juegos de prueba y luego el SELECT para ver los resultados
 -- datos invalidos
@@ -110,12 +111,12 @@ SELECT * FROM ddbba.Pedido WHERE fecha_pedido = '2020-01-02' and hora_pedido='00
 EXEC ddbba.insertarVenta
 	100000,10000,10000; --debe dar error el id de pedido
 EXEC ddbba.insertarVenta
-	3,100000,1111110; --debe dar error el id de sucursal
+	1,100000,1111110; --debe dar error el id de sucursal
 EXEC ddbba.insertarVenta
-	3,1,0; --debe dar error el empleado
+	1,1,0; --debe dar error el empleado
 EXEC ddbba.insertarVenta
-	3,1,900000; --debe insertarse correctamente los datos
-SELECT * FROM ddbba.Venta WHERE id_pedido = 3 AND id_sucursal = 1 AND id_empleado = 900000; --observe que la venta fue agregado exitosamente
+	1,1,900000; --debe insertarse correctamente los datos
+SELECT * FROM ddbba.Venta WHERE id_pedido = 1 AND id_sucursal = 1 AND id_empleado = 900000; --observe que la venta fue agregado exitosamente
 
 
 -- prueba para SP insertarTiene, Ejecute los siguientes juegos de prueba y  luego el SELECT para ver los resultados
@@ -125,31 +126,33 @@ EXEC ddbba.insertarTiene
 EXEC ddbba.insertarTiene
 	0,1,0; --debe dar error el id de pedido
 EXEC ddbba.insertarTiene
-	3,1,0; --debe dar error la cantidad
+	1,1,0; --debe dar error la cantidad
 EXEC ddbba.insertarTiene
-	3,1,10; --debe insertarse correctamente los datos
-SELECT * FROM ddbba.Tiene WHERE id_pedido = 3 AND id_producto = 1 ;--observe que los datos fueron agregado exitosamente
+	1,1,10; --debe insertarse correctamente los datos
+SELECT * FROM ddbba.Tiene WHERE id_pedido = 1 AND id_producto = 1 ;--observe que los datos fueron agregado exitosamente
 
 
 -- prueba para SP insertarFactura, Ejecute los siguientes juegos de prueba y  luego el SELECT para ver los resultados
 -- datos invalidos
 EXEC ddbba.insertarFactura
-	'1','Z',10,'2030-01-01'; --debe dar error en el id
+	'1','Z',10,'2030-01-01',''; --debe dar error en el id
 EXEC ddbba.insertarFactura
-	'900-00-0000','Z',10,'2030-01-01'; --debe dar error tipo
+	'900-00-0000','Z',10,'2030-01-01',''; --debe dar error tipo
 EXEC ddbba.insertarFactura
-	'900-00-0000','A',10,'2030-01-01'; --debe dar error en el pedido
+	'900-00-0000','A',10,'2030-01-01',''; --debe dar error en el pedido
 EXEC ddbba.insertarFactura
-	'900-00-0000','A',3,'2030-01-01'; --debe dar error la fecha
+	'900-00-0000','A',1,'2030-01-01',''; --debe dar error la fecha
 EXEC ddbba.insertarFactura
-	'900-00-0000','A',3,'2020-01-01'; --debe insertarse la factura correctamente
+	'900-00-0000','A',1,'2030-01-01',''; --debe dar error el estado
 EXEC ddbba.insertarFactura
-	'900-00-0000','A',3,'2020-01-01'; --debe dar error de existencia
+	'900-00-0000','A',1,'2020-01-01','Pagado'; --debe insertarse la factura correctamente
+EXEC ddbba.insertarFactura
+	'900-00-0000','A',1,'2020-01-01','Pagado'; --debe dar error de existencia
 SELECT * FROM ddbba.Factura WHERE id_factura = '900-00-0000' --observe que la factura fue agregado exitosamente
 
 
 
---Luego de ejecutar los SP, emilinar los datos de prueba de las tablas
+--Luego de ejecutar los SP, emilinar los datos de prueba de las tablas DE ABAJO HACIA ARRIBA
 DELETE FROM ddbba.Sucursal WHERE localidad='Ramos Mejia' and direccion='Av Rivadavia 2343';
 DELETE FROM ddbba.Empleado WHERE id_empleado = 900000;
 DELETE FROM ddbba.Proveedor WHERE nombre = 'Peperino';
@@ -158,15 +161,7 @@ DELETE FROM ddbba.Provee WHERE id_producto = 1 AND id_proveedor = 1;
 DELETE FROM ddbba.Cliente WHERE id_cliente = 90000;
 DELETE FROM ddbba.MedioPago WHERE tipo = 'Efectivo' 
 DELETE FROM ddbba.Pedido WHERE fecha_pedido = '2020-01-02' and hora_pedido='00:00' and id_cliente=90000 and id_mp=1;
-DELETE FROM ddbba.Venta WHERE id_pedido = 3 AND id_sucursal = 1 AND id_empleado = 900000; --observe que el cliente fue agregado exitosamente
-DELETE FROM ddbba.Tiene WHERE id_pedido = 3 AND id_producto = 1;
+DELETE FROM ddbba.Venta WHERE id_pedido = 1 AND id_sucursal = 1 AND id_empleado = 900000; --observe que el cliente fue agregado exitosamente
+DELETE FROM ddbba.Tiene WHERE id_pedido = 1 AND id_producto = 1;
 DELETE FROM ddbba.Factura WHERE id_factura= '900-00-0000' ;
-
---ENTREGA N4
--- prueba para SP Electronic accessories.xlsx,
---observe que si ponemos una ruta invalida, no dejara cargar los datos
-EXEC Importar_ElectronicAccessories 'Electronic accessories.xlsx';
---agregamos una ruta valida y ejecutamos
-EXEC Importar_ElectronicAccessories 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Electronic accessories.xlsx';
---si el archivo ya fue agregado anteriormente y queremos volver a cargar los mismo productos no se modificara (0 rows affected) ya que no permite ingresar productos con el mismo nombre
 
