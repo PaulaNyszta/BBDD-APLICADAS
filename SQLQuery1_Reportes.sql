@@ -1,6 +1,6 @@
 --4. SCRIPT DE REPORTES  - 28/02/2025 - Com 1353 - Grupo 01 - Base de Datos Aplicadas, BARRIONUEVO LUCIANO [45429539], NYSZTA PAULA [45129511].
 
---ATENCION: puede ejecutar directamente el codigo para crear los SP que generan los reportes, luego podra ejecutar cada uno de ellos con la sintaxis de abajo
+--ATENCION: puede ejecutar directamente el codigo para crear los SP que generan los reportes, luego podra ejecutar cada uno de ellos con la sintaxis de abajo DE CADA REPORTE
 --SI NO SE IMPORTAN LOS DATOS DEL SCPRIP 3 NO SE GENERARAN LOS REPORTES YA QUE NO HABRA DATOS DISPONIBLES
 
 --REPORTE Mensual: ingresando un mes y año determinado mostrar el total facturado por días de la semana, incluyendo sábado y domingo.
@@ -15,16 +15,28 @@ CREATE PROCEDURE Reporte_FacturacionMensual_XML
     @Anio INT
 AS
 BEGIN
+	--valida que se un mes valido 
+	IF @Mes>12 or @Mes<1
+	BEGIN
+		print 'mes invalido';
+		return;
+	END;
+	--valida que se un anio valido 
+	IF @Anio>YEAR(GETDATE()) or @Anio<1800
+	BEGIN
+		print 'Anio invalido';
+		return;
+	END;
     SELECT 
         DATENAME(WEEKDAY, Ped.fecha_pedido) AS DiaSemana, --Obtiene el nombre del día de la semana
-        SUM(T.cantidad*P.precio_unitario) AS TotalFacturado --Suma los valores de la columna total
+        SUM(T.cantidad*P.precio_unitario) AS TotalFacturado 
     FROM ddbba.Tiene T inner join ddbba.Producto P 
 			on T.id_producto=P.id_producto
 			inner join ddbba.Pedido Ped on Ped.id_pedido = T.id_pedido
     WHERE MONTH(Ped.fecha_pedido) = @Mes AND YEAR(Ped.fecha_pedido) = @Anio
-    GROUP BY DATENAME(WEEKDAY, Ped.fecha_pedido) --ordenado por dia de la semana
-    FOR XML PATH('Dia'), ROOT('FacturacionMensual'); --Cada fila se convierte en un nodo <Dia>
-													--ROOT('FacturacionMensual'): Agrega un nodo raíz <FacturacionMensual> que encapsula todos los <Dia>.
+    GROUP BY DATENAME(WEEKDAY, Ped.fecha_pedido) 
+    FOR XML PATH('Dia'), ROOT('FacturacionMensual'); 
+													
 	
 END;
 go
@@ -47,6 +59,20 @@ CREATE PROCEDURE ObtenerFacturacionPorTrimestreXML
     @Trimestre INT
 AS
 BEGIN
+	--valida que se un anio valido 
+	IF @Anio>YEAR(GETDATE()) or @Anio<1800
+	BEGIN
+		print 'Anio invalido';
+		return;
+	END;
+	--valida que se un trimestre valido 
+	IF @Trimestre>4 or @Trimestre<1
+	BEGIN
+		print 'Trimestre invalido';
+		return;
+	END;
+
+
     DECLARE @MesInicio INT, @MesFin INT;
 
     -- Determinar los meses del trimestre
@@ -111,6 +137,12 @@ CREATE PROCEDURE Reporte_ProductosVendidos_XML
     @FechaFin DATE
 AS
 BEGIN
+	--validar que la fecha de inicio se mas cicas que la fecha de fin
+	IF @FechaFin<@FechaInicio
+	BEGIN
+		PRINT 'la fecha de fin debe ser mas grande que la fecha de inicio'
+		return;
+	END;
     SELECT 
         P.id_producto,
         P.nombre_producto,
@@ -142,6 +174,12 @@ CREATE PROCEDURE ObtenerVentasPorRangoFechasXML
     @FechaFin DATE
 AS
 BEGIN
+	--validar que la fecha de inicio se mas cicas que la fecha de fin
+	IF @FechaFin<@FechaInicio
+	BEGIN
+		PRINT 'la fecha de fin debe ser mas grande que la fecha de inicio'
+		return;
+	END;
     SELECT 
         S.localidad AS Sucursal,
         SUM(T.cantidad) AS CantidadVendida
@@ -169,10 +207,24 @@ BEGIN
 END;
 go
 CREATE PROCEDURE ObtenerTopProductosPorSemanaXML
-    @Anio INT,
-    @Mes INT
+     @Mes INT ,
+	 @Anio INT
+  
 AS
 BEGIN
+	--valida que se un mes valido 
+	IF @Mes>12 or @Mes<1
+	BEGIN
+		print 'mes invalido';
+		return;
+	END;
+	--valida que se un anio valido 
+	IF @Anio>YEAR(GETDATE()) or @Anio<1800
+	BEGIN
+		print 'Anio invalido';
+		return;
+	END;
+
     WITH Semanas AS (
         SELECT 
             (DATEPART(WEEK, Ped.fecha_pedido) - DATEPART(WEEK, DATEFROMPARTS(@Anio, @Mes, 1)) + 1) AS Semana,
@@ -200,7 +252,7 @@ BEGIN
 END;
 go
 	/*------------------EJECUTAR----------------------------------
-	EXEC ObtenerTopProductosPorSemanaXML @Anio = 2019, @Mes = 3;
+	EXEC ObtenerTopProductosPorSemanaXML @Mes = 3, @Anio = 2019;
 	------------------------------------------------------------*/
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -213,10 +265,24 @@ BEGIN
 END;
 go
 CREATE PROCEDURE ObtenerMenoresProductosDelMesXML
-    @Anio INT,
-    @Mes INT
+    @Mes INT,
+	@Anio INT
+    
 AS
 BEGIN
+	--valida que se un mes valido 
+	IF @Mes>12 or @Mes<1
+	BEGIN
+		print 'mes invalido';
+		return;
+	END;
+	--valida que se un anio valido 
+	IF @Anio>YEAR(GETDATE()) or @Anio<1800
+	BEGIN
+		print 'Anio invalido';
+		return;
+	END;
+
     WITH VentasMes AS (
         SELECT 
             P.id_producto,
@@ -239,7 +305,7 @@ BEGIN
 END;
 GO
 	/*------------EJECUTAR-----------------------------------------
-	EXEC ObtenerMenoresProductosDelMesXML @Anio = 2019, @Mes = 1;
+	EXEC ObtenerMenoresProductosDelMesXML  @Mes = 1,@Anio = 2019;
 	-------------------------------------------------------------*/
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -256,6 +322,14 @@ CREATE PROCEDURE ObtenerVentasPorFechaYSucursalXML
     @SucursalID INT
 AS
 BEGIN
+	--validar que el id de la sucursal exista
+	IF NOT EXISTS (SELECT 1 FROM ddbba.Sucursal WHERE @SucursalID=id_sucursal)
+	BEGIN
+		print 'sucursal no xiste';
+		return;
+	END;
+
+
     -- Cálculo del detalle de ventas y total acumulado en un solo bloque
     WITH VentasDetalle AS (
         SELECT 
@@ -307,6 +381,18 @@ CREATE PROCEDURE Reporte_VendedorTopPorSucursal_XML
     @Anio INT
 AS
 BEGIN
+	--valida que se un mes valido 
+	IF @Mes>12 or @Mes<1
+	BEGIN
+		print 'mes invalido';
+		return;
+	END;
+	--valida que se un anio valido 
+	IF @Anio>YEAR(GETDATE()) or @Anio<1800
+	BEGIN
+		print 'Anio invalido';
+		return;
+	END;
     SET NOCOUNT ON;
 
     WITH FacturacionPorVendedor AS (

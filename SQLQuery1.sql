@@ -1,4 +1,7 @@
--- 1. SRIPT DE CREACION - 28/02/2025 - Com 1353 - Grupo 01 - Base de Datos Aplicadas, BARRIONUEVO LUCIANO [45429539], NYSZTA PAULA [45129511].
+-- 1. SCRIPT DE CREACION - 28/02/2025 - Com 1353 - Grupo 01 - Base de Datos Aplicadas, BARRIONUEVO LUCIANO [45429539], NYSZTA PAULA [45129511].
+--En este Script se incluiran todos los Store Procedures, Triggers y Tablas que deben crearse para la ultilizacion posterior
+
+--Crea la Base de datos
 IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'Com1353G01')
 	BEGIN
 		CREATE DATABASE Com1353G01;
@@ -7,14 +10,16 @@ IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'Com1353G01')
 go
 USE Com1353G01
 go
+--Crear el Schema
 IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'ddbba')
 	BEGIN
 		EXEC('CREATE SCHEMA ddbba');
 		PRINT ' Schema creado exitosamente';
 	END;
 go
- --CREACION DE TABLAS-----------
 
+--Creacion e las tablas 
+--TABLA SUCURSAL
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Sucursal') AND type = N'U') -- 'U' tabla creada por el usuario 'N' es q sea unicode
 	BEGIN
 		CREATE TABLE ddbba.Sucursal (
@@ -31,6 +36,7 @@ ELSE
 		PRINT 'La tabla Sucursal ya existe.';
 	END;
 go
+--TABLA EMPLEADO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Empleado') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Empleado (
@@ -54,6 +60,7 @@ ELSE
 		PRINT 'La tabla Empleado ya existe.';
 	END;
 go
+--TABLA PROVEEDOR
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Proveedor') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba .Proveedor (
@@ -67,6 +74,7 @@ ELSE
 		PRINT 'La tabla Proveedor ya existe.';
 	END;
 go
+--TABLA PRODUCTO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Producto') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Producto (
@@ -87,6 +95,7 @@ ELSE
 		PRINT 'La tabla Producto ya existe.';
 	END;
 go
+--TABLA PROVEE
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Provee') AND type = N'U')
 	BEGIN 
 		CREATE TABLE ddbba.Provee (
@@ -103,6 +112,7 @@ ELSE
 		PRINT 'La tabla Provee ya existe.';
 	END;
 go
+--TABLA CLIENTE
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Cliente') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Cliente (
@@ -120,6 +130,7 @@ ELSE
 		PRINT 'La tabla Cliente ya existe.';
 	END;
 go
+--TABLA MEDIO DE PAGO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.MedioPago') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.MedioPago (
@@ -133,6 +144,7 @@ ELSE
 		PRINT 'La tabla MedioPago ya existe.';
 	END;
 go
+--TABLA PEDIDO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Pedido') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Pedido (
@@ -152,6 +164,7 @@ ELSE
 		PRINT 'La tabla Pedido ya existe.';
 	END;
 go
+--TABLA VENTA
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Venta') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Venta (
@@ -170,6 +183,7 @@ ELSE
 		PRINT 'La tabla Venta ya existe.';
 	END;
 go
+--TABLA TIENE
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Tiene') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Tiene (
@@ -187,6 +201,7 @@ ELSE
 		PRINT 'La tabla Tiene ya existe.';
 	END;
 go
+--TABLA FACTURA
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Factura') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Factura (
@@ -206,10 +221,14 @@ ELSE
 	END;
 go
 
+<<<<<<< HEAD
 
 
 
 ---------------------------------------------SP--------------------------------------------------------------------
+=======
+--creacion de los Store Procedure que validan la insercion de los datos a las tablas anteriores
+>>>>>>> c917d293e55f04979b72a0a0cd6e9eadd110c714
 -- SP PARA CLIENTE
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarCliente')
 BEGIN
@@ -226,7 +245,12 @@ CREATE PROCEDURE ddbba.insertarCliente
 AS
 BEGIN
 
-
+	--validacion de que el cliente no se haya insertado
+	IF EXISTS (SELECT 1 FROM ddbba.Cliente WHERE @id=id_cliente)
+	BEGIN
+		PRINT 'Cliente ya existente';
+		RETURN;
+	END;
 	-- Validación del que el genero sea female o male
 	IF (@genero NOT IN ('Female', 'Male'))
 	BEGIN
@@ -245,7 +269,8 @@ BEGIN
 		PRINT 'La fecha de alta no puede ser futura';
 		RETURN;
 	END;
-    
+
+    --inserta datos en la tabla 
 	INSERT INTO ddbba.Cliente (id_cliente,genero, tipo, apellido,nombre,fecha_nac)
 	VALUES (@id,@genero,@tipo,@apellido,@nombre,@fnac);
 	PRINT 'Cliente insertado correctamente';
@@ -298,7 +323,7 @@ BEGIN
 		PRINT'El turno debe ser TT, TM, o Jornada completa';
 		RETURN;
 	END;
-    	-- Validación de que el id_sucursal exista
+    -- Validación de que el id_sucursal exista
 	IF NOT EXISTS (SELECT 1 FROM ddbba.Sucursal	WHERE @id_sucursal = id_sucursal)
 	BEGIN
 		PRINT'El id_sucursal debe existir';
@@ -324,12 +349,13 @@ CREATE PROCEDURE ddbba.InsertarPedido (
 AS
 BEGIN
 	
-	-- Validación de que el pedido sea un numero unico 
+	-- Validación de que el pedido sea un unico 
 	IF EXISTS (SELECT 1 FROM ddbba.Pedido WHERE @fecha_pedido = fecha_pedido and @hora_pedido=hora_pedido and @id_cliente=id_cliente and @id_mp=id_mp and iden_pago=@iden_pago) 
 	BEGIN
 		PRINT'El pedido ya existe';
 		RETURN;
 	END;    
+
     --validadcion de la fecha del pedido no sea futura
     IF (@fecha_pedido > GETDATE())
     BEGIN
@@ -378,7 +404,9 @@ BEGIN
 		IF EXISTS (SELECT 1 FROM ddbba.Factura WHERE id_factura = @id_factura) 
 		BEGIN
 			PRINT'El Id de la Factura ya existe';
+			RETURN;
 		END;    
+
 		--verificacion de que el tipo de factura se A, B o C
 		IF (@tipo_factura NOT IN ('A','B','C'))
 			BEGIN
@@ -423,14 +451,13 @@ BEGIN
 
 
 	--validar que el medio de pago sea Credit card, Cash, Ewallet
-
 	IF  @tipo NOT IN ('Credit card','Cash','Ewallet')
 	BEGIN
 		PRINT 'el medio de pago debe ser Credit card, Cash o Ewallet';
 		RETURN;
 	END;
 	
-	--cambiamos el medio de pago a esp
+	--cambiamos el medio de pago a espaniol
 		IF @tipo IN ('Credit card')
 			SET @tipo = 'Tarjeta de credito';
 		IF @tipo IN ('Cash')
@@ -438,7 +465,7 @@ BEGIN
 		IF @tipo IN ('Ewallet')
 			SET @tipo = 'Billetera Electronica';
 
-	--validar que el medio de pago no exisya
+	--validar que el medio de pago no exista
 	IF  EXISTS (SELECT 1 FROM ddbba.MedioPago WHERE @tipo = tipo)
 	BEGIN
 		PRINT 'medio de pago ya existente';
@@ -464,7 +491,7 @@ CREATE PROCEDURE ddbba.insertarSucursal
 AS
 BEGIN
 
-	-- Validación de id_sucursal sea un numero unico 
+	-- Validación de id_sucursal sea unico 
 	IF EXISTS (SELECT 1 FROM ddbba.Sucursal WHERE @localidad=localidad and @direccion=direccion) 
 	BEGIN
 		PRINT 'id sucursal ya existente';
@@ -503,7 +530,7 @@ BEGIN
         IF (@nombre IS NULL)
         BEGIN
             PRINT 'El nombre del proveedor no puede ser nulo.'
-            RETURN; -- Detiene la ejecucion
+            RETURN; 
         END;
 
         -- Validar que el proveedor no exista ya en la tabla
@@ -538,32 +565,32 @@ CREATE PROCEDURE ddbba.insertarProducto
 	@fecha datetime
 AS
 BEGIN
-
+		--validar que el porducta no exista
 		 IF EXISTS (SELECT 1 FROM ddbba.Producto WHERE @precio_unitario = precio_unitario and @linea=linea and @nombre_producto=nombre_producto and @precio_referencia=precio_referencia and @unidad=unidad and @cantidadPorUnidad=cantidadPorUnidad and @moneda=moneda and @fecha=fecha)
         BEGIN
             PRINT 'El producto ya existe en la tabla.'
             RETURN;
         END;
-
+		--validar que el precio no sea nulo ni negativo
 		IF (@precio_unitario <= 0)
 		BEGIN
 			PRINT 'El precio del producto debe ser mayor a cero'
 			RETURN;
 		END;
 
-		
+		--validar que el precio de referencia no sea negativo
 		IF (@precio_referencia < 0)
 		BEGIN
 			PRINT 'El precio de referencia debe ser mayor a cero'
 			RETURN;
 		END;
-
+		--validar que la fecha no sea futura
 		IF @fecha > GETDATE()
 		BEGIN
 			PRINT 'La fecha del producto no debe ser futura';
 			RETURN;
 		END;
-
+		--validar que la moneda sea USD, ARS o EUR
 		IF @moneda NOT IN ('USD', 'EUR', 'ARS')
 		BEGIN
 			PRINT 'La moneda debe ser de tipo USD, EUR o ARS';
@@ -588,13 +615,19 @@ CREATE PROCEDURE ddbba.insertarVenta
 	@id_empleado INT
 AS
 BEGIN
-	--verificar que el pedido exista
+	--verificar que la venta es unica
+	IF EXISTS (SELECT  1 FROM ddbba.Venta WHERE @id_empleado=id_empleado and @id_pedido=id_pedido and @id_sucursal=id_sucursal)
+	BEGIN	
+		PRINT 'La venta ya existe';
+		RETURN;
+	END
+	--verificar que el pedido  exista
 	IF NOT EXISTS (SELECT 1 FROM ddbba.Pedido WHERE id_pedido = @id_pedido)
 	BEGIN	
 		PRINT 'El Pedido no existe.';
 		RETURN;
 	END;
-	--verificar que la sucursal exista
+	--verificar que la sucursal  exista
 	IF NOT EXISTS (SELECT 1 FROM ddbba.Sucursal WHERE id_sucursal = @id_sucursal)
 	BEGIN	
 		PRINT 'La Sucursal no existe.';
@@ -624,6 +657,12 @@ CREATE PROCEDURE ddbba.InsertarTiene
 AS
 
 BEGIN
+	--verificar que no se inserten datos iguales
+	if  EXISTS (SELECT 1 FROM ddbba.Tiene WHERE id_producto = @id_producto and @id_pedido=id_pedido )
+	BEGIN
+		PRINT 'El pedido ya tiene esos datos'
+		RETURN;
+	END;
 	--verificar si el producto existe
 	if NOT EXISTS (SELECT 1 FROM ddbba.Producto WHERE id_producto = @id_producto )
 	BEGIN
