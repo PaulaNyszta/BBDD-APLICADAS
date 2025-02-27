@@ -60,21 +60,20 @@ BEGIN
 END;
 go
 
-<<<<<<< HEAD
 --ejecutar el Store procedure
 EXEC Importar_ElectronicAccessories 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Productos\Electronic accessories.xlsx';
 go
 ----fijarse
 SELECT * FROM ddbba.Producto
 --para solucionar error 7099, 7050 Win+R -->services.msc -->SQL Server (SQLEXPRESS)--> propiedades-->iniciar sesion-->cabiar a "Cuenta del sistema local", Marca la casilla "Permitir que el servicio interactúe con el escritorio".
-=======
+
 	/*--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos---------------------------------------------------------------------------
 	EXEC Importar_ElectronicAccessories 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Electronic accessories.xlsx';
 	-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 	/*----OBSERVAR INSERCION
 	SELECT * FROM ddbba.Producto
 	*/
->>>>>>> 4fb4ab9c57aefdf94b55da9d3040951312b9b75d
+
 
 
 
@@ -160,7 +159,7 @@ END;
 go
 
 
-<<<<<<< HEAD
+
 --ejecutar el Store procedure
 EXEC Importar_Productos_importados 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Productos\Productos_importados.xlsx';
 go
@@ -170,7 +169,7 @@ select * from ddbba.Proveedor
 select * from ddbba.Provee
 ----borrar el SP
 --DROP PROCEDURE Importar_Productos_importados
-=======
+
 	/*EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos---------------------------------------------------------------------------
 	EXEC Importar_Productos_importados 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Productos_importados.xlsx';
 	----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
@@ -179,7 +178,7 @@ select * from ddbba.Provee
 	select * from ddbba.Proveedor
 	select * from ddbba.Provee
 	*/
->>>>>>> 4fb4ab9c57aefdf94b55da9d3040951312b9b75d
+
 
 
 
@@ -272,20 +271,20 @@ BEGIN
 END;
 go
 
-<<<<<<< HEAD
+
 --ejecutar el Store procedure
 EXEC Importar_Catalogo 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Productos\catalogo.csv', 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx'
 go
 ----fijarse
 SELECT * FROM ddbba.Producto
-=======
+
 	/*EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos-------------------------ARCHIVO CATALOGO.CSV----------------------------------------------------------------------------------ARCHIVO INFROMSCION_COMPLEMENTARIA.XLSX-------------------------
 	EXEC Importar_Catalogo 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\catalogo.csv', 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx'
 	------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 	/*OBSERVAR INSERCION
 	SELECT * FROM ddbba.Producto
 	*/
->>>>>>> 4fb4ab9c57aefdf94b55da9d3040951312b9b75d
+
 
 
 
@@ -442,17 +441,14 @@ BEGIN
 
 END; --fin SP
 go
-<<<<<<< HEAD
+
 --ejecutar el Store procedure
 EXEC Importar_Informacion_complementaria 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx';
 go
 ----fijarse
 SELECT * FROM ddbba.Sucursal
 SELECT * FROM ddbba.Empleado
--------------------------------------------------------------------------------------------------------------------------------------------------
--------------------------------------------------------------------------------------------------------------------------------------------------
-=======
->>>>>>> 4fb4ab9c57aefdf94b55da9d3040951312b9b75d
+
 
 	/*EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos------------------------------------------------------------------
 	EXEC Importar_Informacion_complementaria 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx';
@@ -704,25 +700,22 @@ BEGIN
 
 END;
 go
-<<<<<<< HEAD
+
 --ejecutar el Store procedure
-<<<<<<< HEAD
+
 EXEC Importar_Ventas_registradas 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Ventas_registradas.csv'
-=======
-EXEC Importar_Ventas_registradas 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Ventas_registradas.csv'
->>>>>>> be3fe142b234079a1f8c960280634d9fa6a085cc
+
 --fijarse
 SELECT * FROM ddbba.Pedido
 SELECT  * FROM ddbba.Cliente
 SELECT * FROM ddbba.Venta
 SELECT * FROM ddbba.Tiene
 SELECT * FROM ddbba.Factura
-<<<<<<< HEAD
+SELECT * FROM ddbba.Empleado
 SELECT * FROM ddbba.Producto
 
 
-=======
-=======
+
 	/*EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos------------------------------------------------------------------
 	EXEC Importar_Ventas_registradas 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Ventas_registradas.csv'
 	-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
@@ -733,7 +726,7 @@ SELECT * FROM ddbba.Producto
 	SELECT * FROM ddbba.Tiene
 	SELECT * FROM ddbba.Factura
 	*/
->>>>>>> 4fb4ab9c57aefdf94b55da9d3040951312b9b75d
+
 
 
 
@@ -751,17 +744,13 @@ GO
 EXEC Insertar_MediosDePago;
 GO
 EXEC Importar_Ventas_registradas 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Ventas_registradas.csv'
-<<<<<<< HEAD
->>>>>>> be3fe142b234079a1f8c960280634d9fa6a085cc
-=======
-*/
->>>>>>> 4fb4ab9c57aefdf94b55da9d3040951312b9b75d
 
 
 /*
 CREATE PROCEDURE Borrar
 AS
 BEGIN
+	DROP TABLE ddbba.NotaCredito 
 	 DROP TABLE ddbba.Factura
 	DROP TABLE ddbba.Tiene
 	DROP TABLE ddbba.Venta
@@ -776,332 +765,3 @@ BEGIN
 END;	
 */
 
-
-
-
-
-<<<<<<< HEAD
---Trimestral: mostrar el total facturado por turnos de trabajo por mes. 
-CREATE PROCEDURE ObtenerFacturacionPorTrimestreXML
-    @Anio INT,
-    @Trimestre INT
-AS
-BEGIN
-    DECLARE @MesInicio INT, @MesFin INT;
-
-    -- Determinar los meses del trimestre
-    IF @Trimestre = 1
-    BEGIN
-        SET @MesInicio = 1;
-        SET @MesFin = 3;
-    END
-    ELSE IF @Trimestre = 2
-    BEGIN
-        SET @MesInicio = 4;
-        SET @MesFin = 6;
-    END
-    ELSE IF @Trimestre = 3
-    BEGIN
-        SET @MesInicio = 7;
-        SET @MesFin = 9;
-    END
-    ELSE IF @Trimestre = 4
-    BEGIN
-        SET @MesInicio = 10;
-        SET @MesFin = 12;
-    END
-
-    -- Generar consulta en formato XML
-    SELECT
-        E.turno AS 'Turno',
-        MONTH(F.fecha) AS 'Mes',
-        SUM(T.cantidad * PR.precio_unitario) AS 'TotalFacturado'
-    FROM
-        ddbba.Factura F
-    JOIN ddbba.Pedido PED ON F.id_pedido = PED.id_pedido
-    JOIN ddbba.Venta V ON V.id_pedido = PED.id_pedido
-    JOIN ddbba.Empleado E ON V.id_empleado = E.id_empleado
-    JOIN ddbba.Tiene T ON T.id_pedido = PED.id_pedido
-    JOIN ddbba.Producto PR ON T.id_producto = PR.id_producto
-    WHERE
-        YEAR(F.fecha) = @Anio
-        AND MONTH(F.fecha) BETWEEN @MesInicio AND @MesFin
-    GROUP BY
-        E.turno, MONTH(F.fecha)
-    ORDER BY
-        E.turno, MONTH(F.fecha)
-    FOR XML PATH('Factura'), ROOT('Facturas');
-END;
-
-DROP PROCEDURE ObtenerFacturacionPorTrimestreXML
-
-EXEC ObtenerFacturacionPorTrimestreXML @Anio = 2019, @Trimestre = 1;
-
-
---Por rango de fechas: ingresando un rango de fechas a demanda, debe poder mostrar la cantidad de productos vendidos en ese rango por sucursal, ordenado de mayor a menor.
-CREATE PROCEDURE ObtenerVentasPorRangoFechasXML
-    @FechaInicio DATE,
-    @FechaFin DATE
-AS
-BEGIN
-    SELECT 
-        S.localidad AS Sucursal,
-        SUM(T.cantidad) AS CantidadVendida
-    FROM ddbba.Venta V
-    INNER JOIN ddbba.Pedido Ped ON V.id_pedido = Ped.id_pedido
-    INNER JOIN ddbba.Tiene T ON T.id_pedido = Ped.id_pedido
-    INNER JOIN ddbba.Sucursal S ON V.id_sucursal = S.id_sucursal
-    WHERE Ped.fecha_pedido BETWEEN @FechaInicio AND @FechaFin
-    GROUP BY S.localidad
-    ORDER BY CantidadVendida DESC
-    FOR XML PATH('Venta'), ROOT('ReporteVentas');
-END;
-go
-
-
-DROP PROCEDURE ObtenerVentasPorRangoFechasXML
-
-
-EXEC ObtenerVentasPorRangoFechasXML 
-    @FechaInicio = '2019-01-01', 
-    @FechaFin = '2019-02-28';
-
-
---Mostrar los 5 productos más vendidos en un mes, por semana 
-CREATE PROCEDURE ObtenerTopProductosPorSemanaXML
-    @Anio INT,
-    @Mes INT
-AS
-BEGIN
-    WITH Semanas AS (
-        SELECT 
-            (DATEPART(WEEK, Ped.fecha_pedido) - DATEPART(WEEK, DATEFROMPARTS(@Anio, @Mes, 1)) + 1) AS Semana,
-            P.id_producto,
-            P.nombre_producto,
-            SUM(T.cantidad) AS CantidadVendida
-        FROM ddbba.Tiene T
-        INNER JOIN ddbba.Producto P ON T.id_producto = P.id_producto
-        INNER JOIN ddbba.Pedido Ped ON T.id_pedido = Ped.id_pedido
-        WHERE YEAR(Ped.fecha_pedido) = @Anio
-          AND MONTH(Ped.fecha_pedido) = @Mes
-        GROUP BY DATEPART(WEEK, Ped.fecha_pedido), P.id_producto, P.nombre_producto
-    )
-    SELECT 
-        S.Semana,
-        S.id_producto,
-        S.nombre_producto,
-        S.CantidadVendida
-    FROM Semanas S
-    WHERE (SELECT COUNT(*) FROM Semanas S2 
-           WHERE S2.Semana = S.Semana 
-           AND S2.CantidadVendida >= S.CantidadVendida) <= 5
-    ORDER BY S.Semana, S.CantidadVendida DESC
-    FOR XML PATH('Producto'), ROOT('TopProductos');
-END;
-GO
-
-DROP PROCEDURE ObtenerTopProductosPorSemanaXML 
-
-EXEC ObtenerTopProductosPorSemanaXML 
-    @Anio = 2019, 
-    @Mes = 3;
-
-
---Mostrar los 5 productos menos vendidos en el mes. 
-
-CREATE PROCEDURE ObtenerMenoresProductosDelMesXML
-    @Anio INT,
-    @Mes INT
-AS
-BEGIN
-    WITH VentasMes AS (
-        SELECT 
-            P.id_producto,
-            P.nombre_producto,
-            SUM(T.cantidad) AS CantidadVendida
-        FROM ddbba.Tiene T
-        INNER JOIN ddbba.Producto P ON T.id_producto = P.id_producto
-        INNER JOIN ddbba.Pedido Ped ON T.id_pedido = Ped.id_pedido
-        WHERE YEAR(Ped.fecha_pedido) = @Anio
-          AND MONTH(Ped.fecha_pedido) = @Mes
-        GROUP BY P.id_producto, P.nombre_producto
-    )
-    SELECT TOP 5 -- Solo tomamos los 5 productos con menor cantidad vendida
-        V.id_producto,
-        V.nombre_producto,
-        V.CantidadVendida
-    FROM VentasMes V
-    ORDER BY V.CantidadVendida ASC -- Orden ascendente para los menos vendidos
-    FOR XML PATH('Producto'), ROOT('BottomProductos');
-END;
-GO
-
-
-DROP PROCEDURE ObtenerMenoresProductosDelMesXML
-EXEC ObtenerMenoresProductosDelMesXML @Anio = 2019, @Mes = 1;
-
---Mostrar total acumulado de ventas (o sea también mostrar el detalle) para una fecha y sucursal particulares 
-
-
-CREATE PROCEDURE ObtenerVentasPorFechaYSucursalXML
-    @Fecha DATE,
-    @SucursalID INT
-AS
-BEGIN
-    -- Cálculo del detalle de ventas y total acumulado en un solo bloque
-    WITH VentasDetalle AS (
-        SELECT 
-            P.id_producto,
-            P.nombre_producto,
-            SUM(T.cantidad) AS CantidadVendida,
-            SUM(T.cantidad * P.precio_unitario) AS TotalVenta
-        FROM ddbba.Tiene T
-        INNER JOIN ddbba.Producto P ON T.id_producto = P.id_producto
-        INNER JOIN ddbba.Pedido Ped ON T.id_pedido = Ped.id_pedido
-        INNER JOIN ddbba.Venta V ON Ped.id_pedido = V.id_pedido
-        WHERE Ped.fecha_pedido = @Fecha
-          AND V.id_sucursal = @SucursalID
-        GROUP BY P.id_producto, P.nombre_producto
-    )
-
-    -- Generación del XML para los detalles de ventas y el total acumulado en un solo SELECT
-    SELECT 
-        V.id_producto,
-        V.nombre_producto,
-        V.CantidadVendida,
-        V.TotalVenta
-    FROM VentasDetalle V
-    UNION ALL
-    SELECT 
-        NULL AS id_producto,
-        'Total Acumulado' AS nombre_producto,
-        SUM(V.CantidadVendida) AS CantidadVendida,
-        SUM(V.TotalVenta) AS TotalVenta
-    FROM VentasDetalle V
-    FOR XML PATH('Producto'), ROOT('ReporteVentas');
-END;
-GO
-
-
-DROP PROCEDURE ObtenerVentasPorFechaYSucursalXML
-EXEC ObtenerVentasPorFechaYSucursalXML @Fecha = '2019-02-15', @SucursalID = 2;
-
---REPORTE MENSUAL
-CREATE PROCEDURE Reporte_VendedorTopPorSucursal_XML
-    @Mes INT,
-    @Anio INT
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    WITH FacturacionPorVendedor AS (
-        SELECT 
-            E.id_empleado,
-            E.nombre AS NombreVendedor,
-            S.id_sucursal,
-            S.localidad AS LocalidadSucursal,
-            SUM(T.cantidad * P.precio_unitario) AS TotalFacturado
-        FROM ddbba.Pedido Ped
-        INNER JOIN ddbba.Venta V ON Ped.id_pedido = V.id_pedido
-        INNER JOIN ddbba.Tiene T ON Ped.id_pedido = T.id_pedido
-        INNER JOIN ddbba.Producto P ON T.id_producto = P.id_producto
-        INNER JOIN ddbba.Empleado E ON V.id_empleado = E.id_empleado
-        INNER JOIN ddbba.Sucursal S ON V.id_sucursal = S.id_sucursal
-       WHERE MONTH(Ped.fecha_pedido) = @Mes AND YEAR(Ped.fecha_pedido) = @Anio
-        GROUP BY E.id_empleado, E.nombre, S.id_sucursal, S.localidad
-    ),
-    MaxFacturacionPorSucursal AS (
-        SELECT 
-            id_sucursal, 
-            MAX(TotalFacturado) AS MaxFacturado
-        FROM FacturacionPorVendedor
-        GROUP BY id_sucursal
-    )
-    SELECT 
-        FV.id_sucursal as Id_sucursal,
-        FV.LocalidadSucursal AS localidad,
-        FV.id_empleado AS Id_empleado,
-        FV.NombreVendedor AS Vendedor,
-        FV.TotalFacturado AS Total_facturado
-    FROM FacturacionPorVendedor FV
-    INNER JOIN MaxFacturacionPorSucursal MF 
-        ON FV.id_sucursal = MF.id_sucursal 
-        AND FV.TotalFacturado = MF.MaxFacturado
-    FOR XML PATH('Reporte'), ROOT('FacturacionMensual');
-END;
---EJECUTAR
-EXEC Reporte_VendedorTopPorSucursal_XML @Mes = 2, @Anio = 2019;
-
-CREATE TABLE ddbba.Cotizacion (
-    fecha DATE PRIMARY KEY,
-    tipo_moneda VARCHAR(10), -- USD, EUR, etc.
-    valor DECIMAL(10,2) -- Cotización del día
-);
-
-SELECT * FROM ddbba.Cotizacion
---TRIMESTRAL CON COTIZACION DE DOLAR
-CREATE PROCEDURE ObtenerFacturacionPorTrimestreXMLa
-    @Anio INT,
-    @Trimestre INT
-AS
-BEGIN
-    DECLARE @MesInicio INT, @MesFin INT;
-
-    -- Determinar los meses del trimestre
-    IF @Trimestre = 1
-    BEGIN
-        SET @MesInicio = 1;
-        SET @MesFin = 3;
-    END
-    ELSE IF @Trimestre = 2
-    BEGIN
-        SET @MesInicio = 4;
-        SET @MesFin = 6;
-    END
-    ELSE IF @Trimestre = 3
-    BEGIN
-        SET @MesInicio = 7;
-        SET @MesFin = 9;
-    END
-    ELSE IF @Trimestre = 4
-    BEGIN
-        SET @MesInicio = 10;
-        SET @MesFin = 12;
-    END
-
-    -- Obtener cotización del USD más reciente
-    DECLARE @CotizacionUSD DECIMAL(10,2);
-    SELECT TOP 1 @CotizacionUSD = valor FROM ddbba.Cotizacion WHERE tipo_moneda = 'USD' ORDER BY fecha DESC;
-
-    -- Generar consulta en formato XML
-    SELECT
-        E.turno AS 'Turno',
-        MONTH(F.fecha) AS 'Mes',
-        SUM(
-            CASE 
-                WHEN PR.moneda = 'USD' THEN (T.cantidad * PR.precio_unitario * @CotizacionUSD)
-                ELSE (T.cantidad * PR.precio_unitario)
-            END
-        ) AS 'TotalFacturado'
-    FROM
-        ddbba.Factura F
-    JOIN ddbba.Pedido PED ON F.id_pedido = PED.id_pedido
-    JOIN ddbba.Venta V ON V.id_pedido = PED.id_pedido
-    JOIN ddbba.Empleado E ON V.id_empleado = E.id_empleado
-    JOIN ddbba.Tiene T ON T.id_pedido = PED.id_pedido
-    JOIN ddbba.Producto PR ON T.id_producto = PR.id_producto
-    WHERE
-        YEAR(F.fecha) = @Anio
-        AND MONTH(F.fecha) BETWEEN @MesInicio AND @MesFin
-    GROUP BY
-        E.turno, MONTH(F.fecha)
-    ORDER BY
-        E.turno, MONTH(F.fecha)
-    FOR XML PATH('Factura'), ROOT('Facturas');
-END;
-
-EXEC ObtenerFacturacionPorTrimestreXMLa @Anio = 2019, @Trimestre = 1;
-=======
-
-
->>>>>>> be3fe142b234079a1f8c960280634d9fa6a085cc

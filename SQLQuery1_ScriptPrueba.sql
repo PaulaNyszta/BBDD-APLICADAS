@@ -165,3 +165,11 @@ DELETE FROM ddbba.Venta WHERE id_pedido = 1 AND id_sucursal = 1 AND id_empleado 
 DELETE FROM ddbba.Tiene WHERE id_pedido = 1 AND id_producto = 1;
 DELETE FROM ddbba.Factura WHERE id_factura= '900-00-0000' ;
 
+
+
+
+--ENTREGA N5
+-- Prueba para SP insertarFactura, Ejecute los siguientes juegos de prueba y  luego el SELECT para ver los resultados
+--factura no pagada / Supervisor '101-17-6199', 257026
+--factura pagada / Cajero '102-06-2002', 257020
+--factura pagada / Supervisor '102-06-2002', 257026
