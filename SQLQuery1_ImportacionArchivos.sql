@@ -643,16 +643,40 @@ BEGIN
 END;
 go
 --ejecutar el Store procedure
+<<<<<<< HEAD
 EXEC Importar_Ventas_registradas 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Ventas_registradas.csv'
+=======
+EXEC Importar_Ventas_registradas 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Ventas_registradas.csv'
+>>>>>>> be3fe142b234079a1f8c960280634d9fa6a085cc
 --fijarse
 SELECT * FROM ddbba.Pedido
 SELECT  * FROM ddbba.Cliente
 SELECT * FROM ddbba.Venta
 SELECT * FROM ddbba.Tiene
 SELECT * FROM ddbba.Factura
+<<<<<<< HEAD
 SELECT * FROM ddbba.Producto
 
 
+=======
+
+
+SELECT * FROM ddbba.Producto
+
+
+--EJECUTAR
+EXEC Importar_ElectronicAccessories 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Electronic accessories.xlsx';
+GO
+EXEC Importar_Productos_importados 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Productos_importados.xlsx';
+GO
+EXEC Importar_Catalogo 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\catalogo.csv', 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx'
+GO
+EXEC Importar_Informacion_complementaria 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx';
+GO
+EXEC Insertar_MediosDePago;
+GO
+EXEC Importar_Ventas_registradas 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Ventas_registradas.csv'
+>>>>>>> be3fe142b234079a1f8c960280634d9fa6a085cc
 
 
 --borrar tablas
@@ -698,6 +722,7 @@ END;
 GO
 
 
+<<<<<<< HEAD
 --Trimestral: mostrar el total facturado por turnos de trabajo por mes. 
 CREATE PROCEDURE ObtenerFacturacionPorTrimestreXML
     @Anio INT,
@@ -1018,3 +1043,7 @@ BEGIN
 END;
 
 EXEC ObtenerFacturacionPorTrimestreXMLa @Anio = 2019, @Trimestre = 1;
+=======
+
+
+>>>>>>> be3fe142b234079a1f8c960280634d9fa6a085cc
