@@ -324,6 +324,7 @@ BEGIN
 	IF EXISTS (SELECT 1 FROM ddbba.Pedido WHERE @fecha_pedido = fecha_pedido and @hora_pedido=hora_pedido and @id_cliente=id_cliente and @id_mp=id_mp and iden_pago=@iden_pago) 
 	BEGIN
 		PRINT'El pedido ya existe';
+		RETURN;
 	END;    
     --validadcion de la fecha del pedido no sea futura
     IF (@fecha_pedido > GETDATE())
@@ -337,7 +338,12 @@ BEGIN
         PRINT 'Error: El iden_pago debe tener entre 1 y 30 caracteres.';
         RETURN;
     END;
-
+	-- Validación de que el medio de pago exista
+	IF NOT EXISTS (SELECT 1 FROM ddbba.MedioPago WHERE @id_mp=id_mp) 
+	BEGIN
+		PRINT'El Medio de pago no existe';
+		RETURN;
+	END; 
     
     INSERT INTO ddbba.Pedido (fecha_pedido, hora_pedido, id_cliente, id_mp, iden_pago)
     VALUES ( @fecha_pedido, @hora_pedido, @id_cliente, @id_mp, @iden_pago);
