@@ -1,6 +1,8 @@
+-- 3. SCRIPT DE IMPORTACION DE DATOS - 28/02/2025 - Com 1353 - Grupo 01 - Base de Datos Aplicadas, BARRIONUEVO LUCIANO [45429539], NYSZTA PAULA [45129511].
+
 Use Com1353G01
 -----------------------------------------------------------------------------------------------------------------------
--- Procedimiento para importar Electronic accessories.xlsx
+-- 1. Procedimiento Almacenado para importar Electronic accessories.xlsx
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_ElectronicAccessories') 
 BEGIN
 	 DROP PROCEDURE Importar_ElectronicAccessories;
@@ -58,15 +60,29 @@ BEGIN
 END;
 go
 
+<<<<<<< HEAD
 --ejecutar el Store procedure
 EXEC Importar_ElectronicAccessories 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Productos\Electronic accessories.xlsx';
 go
 ----fijarse
 SELECT * FROM ddbba.Producto
 --para solucionar error 7099, 7050 Win+R -->services.msc -->SQL Server (SQLEXPRESS)--> propiedades-->iniciar sesion-->cabiar a "Cuenta del sistema local", Marca la casilla "Permitir que el servicio interactúe con el escritorio".
+=======
+	/*--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos---------------------------------------------------------------------------
+	EXEC Importar_ElectronicAccessories 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Electronic accessories.xlsx';
+	-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+	/*----OBSERVAR INSERCION
+	SELECT * FROM ddbba.Producto
+	*/
+>>>>>>> 4fb4ab9c57aefdf94b55da9d3040951312b9b75d
 
-------------------------------------------------------------------------------------
--- Procedimiento para importar Productos_importados.xlsx
+
+
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- 2. Procedimiento para importar Productos_importados.xlsx
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_Productos_importados') 
 BEGIN
 	 DROP PROCEDURE Importar_Productos_importados;
@@ -144,6 +160,7 @@ END;
 go
 
 
+<<<<<<< HEAD
 --ejecutar el Store procedure
 EXEC Importar_Productos_importados 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Productos\Productos_importados.xlsx';
 go
@@ -153,11 +170,23 @@ select * from ddbba.Proveedor
 select * from ddbba.Provee
 ----borrar el SP
 --DROP PROCEDURE Importar_Productos_importados
+=======
+	/*EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos---------------------------------------------------------------------------
+	EXEC Importar_Productos_importados 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Productos_importados.xlsx';
+	----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+	/*OBSERVAR INSERCION
+	SELECT * FROM ddbba.Producto
+	select * from ddbba.Proveedor
+	select * from ddbba.Provee
+	*/
+>>>>>>> 4fb4ab9c57aefdf94b55da9d3040951312b9b75d
 
 
 
----------------------------------------------------------------------------------------------
--- Procedimiento para importar catalogo.csv
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- 3. Procedimiento para importar catalogo.csv
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_Catalogo') 
 BEGIN
 	 DROP PROCEDURE Importar_Catalogo;
@@ -243,16 +272,26 @@ BEGIN
 END;
 go
 
+<<<<<<< HEAD
 --ejecutar el Store procedure
 EXEC Importar_Catalogo 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Productos\catalogo.csv', 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx'
 go
 ----fijarse
 SELECT * FROM ddbba.Producto
+=======
+	/*EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos-------------------------ARCHIVO CATALOGO.CSV----------------------------------------------------------------------------------ARCHIVO INFROMSCION_COMPLEMENTARIA.XLSX-------------------------
+	EXEC Importar_Catalogo 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\catalogo.csv', 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx'
+	------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+	/*OBSERVAR INSERCION
+	SELECT * FROM ddbba.Producto
+	*/
+>>>>>>> 4fb4ab9c57aefdf94b55da9d3040951312b9b75d
 
 
 
------------------------------------------------------------------------------------------------------------------------------------------------------------------------
--- Procedimiento para importar Informacion_complementaria.xlsx 
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- 4. Procedimiento para importar Informacion_complementaria.xlsx 
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_Informacion_complementaria') 
 BEGIN
 	 DROP PROCEDURE Importar_Informacion_complementaria;
@@ -266,7 +305,7 @@ BEGIN
 
 	DECLARE @SQL NVARCHAR(MAX);
     
-	--1. crear tabla temporal para cargar SUCURSALES--------------------------------------------------
+	--1 crear tabla temporal para cargar SUCURSALES--------------------------------------------------
 	CREATE TABLE #Temp_sucursal (
 		id INT IDENTITY(1,1),
 		localidad VARCHAR(100),
@@ -284,6 +323,7 @@ BEGIN
         ''SELECT [Ciudad], [direccion], [Horario], [Telefono] FROM [sucursal$]'')';
 
     EXEC sp_executesql @SQL;
+
 	--paso el contenido de #temp como parametros para sp insertarSucursal
 
 	DECLARE @contador INT = 1, @totalFilas INT;
@@ -377,9 +417,7 @@ BEGIN
 			@sucursal = sucursal
 		FROM #Temp_empleado WHERE id_emp = @contador;
 		--crear cuil
-		
-			    SET @cuil = CAST((FLOOR(RAND() * 8) + 20) AS VARCHAR) + '-' + CAST(@dni AS VARCHAR) + '-' + CAST((FLOOR(RAND() * 9) + 1) AS VARCHAR);
-
+		SET @cuil = CAST((FLOOR(RAND() * 8) + 20) AS VARCHAR) + '-' + CAST(@dni AS VARCHAR) + '-' + CAST((FLOOR(RAND() * 9) + 1) AS VARCHAR);
 		--guardar id de sucursal
 		SELECT @id_sucursal_emp = id_sucursal
 		FROM ddbba.Sucursal
@@ -404,6 +442,7 @@ BEGIN
 
 END; --fin SP
 go
+<<<<<<< HEAD
 --ejecutar el Store procedure
 EXEC Importar_Informacion_complementaria 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx';
 go
@@ -412,8 +451,23 @@ SELECT * FROM ddbba.Sucursal
 SELECT * FROM ddbba.Empleado
 -------------------------------------------------------------------------------------------------------------------------------------------------
 -------------------------------------------------------------------------------------------------------------------------------------------------
+=======
+>>>>>>> 4fb4ab9c57aefdf94b55da9d3040951312b9b75d
 
--- Procedimiento para crear los MEDIOS DE PAGO
+	/*EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos------------------------------------------------------------------
+	EXEC Importar_Informacion_complementaria 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx';
+	----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+	/*OBSERVAR INSERCION
+	SELECT * FROM ddbba.Sucursal
+	SELECT * FROM ddbba.Empleado
+	*/
+
+
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- 5. Procedimiento para crear los MEDIOS DE PAGO
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Insertar_MediosDePago') 
 BEGIN
 	 DROP PROCEDURE Insertar_MediosDePago;
@@ -429,14 +483,18 @@ BEGIN
 END;
 go
 
---ejecutar el sp Insertar_MediosDePago
-EXEC Insertar_MediosDePago;
---fijarse 
-SELECT * FROM ddbba.MedioPago
+	/*EJECUTAR EL STORE PROCEDURE
+	EXEC Insertar_MediosDePago;
+	----------------------------*/
+	/*OBSERVAR INSERCION
+	SELECT * FROM ddbba.MedioPago
+	*/
 
---------------------------------------------------------------------------------------------------------------------------
------------------------------------------------------------------------------------------------------------
--- Procedimiento para importar Ventas_registradas.csv
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-- 6.Procedimiento para importar Ventas_registradas.csv
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_Ventas_registradas') 
 BEGIN
 	 DROP PROCEDURE Importar_Ventas_registradas;
@@ -558,8 +616,6 @@ BEGIN
 		BEGIN
 			SET @tipo_cliente = 'Normal' ;
 		END;
-
-		--creamos nombre y apellidos aleatorios
 		
 		 --guardamos los datos del clientes
 		 SELECT TOP 1 @nombre = nombre FROM @nombres ORDER BY NEWID();
@@ -627,13 +683,19 @@ BEGIN
 			@id, --id pedido
 			@id_producto,
 			@cantidad
-
+		--generar estados para la factura
+		DECLARE @estado Varchar(10);
+		IF RAND() < 0.5 
+			SET @estado = 'Pagado' 
+		ELSE 
+			SET @estado = 'NoPagado'
 		--insertar los datos en la tabla correspondiente FACTURA	
 		EXEC ddbba.insertarFactura
 			@id_factura,
 			@tipo_factura,
 			@id, --id pedido
-			@fecha
+			@fecha,
+			@estado
 
 		SET @contador = @contador + 1;
 	END;
@@ -642,6 +704,7 @@ BEGIN
 
 END;
 go
+<<<<<<< HEAD
 --ejecutar el Store procedure
 <<<<<<< HEAD
 EXEC Importar_Ventas_registradas 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Ventas_registradas.csv'
@@ -659,11 +722,23 @@ SELECT * FROM ddbba.Producto
 
 
 =======
+=======
+	/*EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos------------------------------------------------------------------
+	EXEC Importar_Ventas_registradas 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Ventas_registradas.csv'
+	-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+	/*OBSERVAR INSERCION
+	SELECT * FROM ddbba.Pedido
+	SELECT  * FROM ddbba.Cliente
+	SELECT * FROM ddbba.Venta
+	SELECT * FROM ddbba.Tiene
+	SELECT * FROM ddbba.Factura
+	*/
+>>>>>>> 4fb4ab9c57aefdf94b55da9d3040951312b9b75d
 
 
-SELECT * FROM ddbba.Producto
 
-
+--CODIGO COMPLEMENTARIO PARA PODER EJECUTAR TODO JUNTO
+/*
 --EJECUTAR
 EXEC Importar_ElectronicAccessories 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Electronic accessories.xlsx';
 GO
@@ -676,10 +751,14 @@ GO
 EXEC Insertar_MediosDePago;
 GO
 EXEC Importar_Ventas_registradas 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Ventas_registradas.csv'
+<<<<<<< HEAD
 >>>>>>> be3fe142b234079a1f8c960280634d9fa6a085cc
+=======
+*/
+>>>>>>> 4fb4ab9c57aefdf94b55da9d3040951312b9b75d
 
 
---borrar tablas
+/*
 CREATE PROCEDURE Borrar
 AS
 BEGIN
@@ -695,31 +774,10 @@ BEGIN
 	DROP TABLE ddbba.Empleado
 	DROP TABLE ddbba.Sucursal
 END;	
+*/
 
 
 
---------------------------------------------
-CREATE FUNCTION ddbba.NormalizarFecha (@FechaExcel VARCHAR(50))
-RETURNS DATE
-AS
-BEGIN
-    DECLARE @FechaFinal DATE;
-
-    -- Verifica si el valor es un número (indica que es una fecha numérica de Excel)
-    IF ISNUMERIC(@FechaExcel) = 1
-    BEGIN
-        -- Convierte el número de días desde 1899-12-30 a una fecha
-         SET @FechaFinal = DATEADD(DAY, CAST(@FechaExcel AS INT), '1899-12-30');
-    END
-    ELSE
-    BEGIN
-        -- Intenta convertirlo desde formato MM/DD/YYYY a DATE
-        SET @FechaFinal = TRY_CONVERT(DATE, @FechaExcel, 101);
-    END
-
-    RETURN @FechaFinal;
-END;
-GO
 
 
 <<<<<<< HEAD

@@ -1,4 +1,4 @@
--- Script de creacion - fecha de entrega - Com 1353 - Grupo 01 - Base de Datos Aplicadas, nombres y DNI de los alumnos.
+-- 1. SRIPT DE CREACION - 28/02/2025 - Com 1353 - Grupo 01 - Base de Datos Aplicadas, BARRIONUEVO LUCIANO [45429539], NYSZTA PAULA [45129511].
 IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'Com1353G01')
 	BEGIN
 		CREATE DATABASE Com1353G01;
@@ -18,7 +18,7 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Sucursal') AND type = N'U') -- 'U' tabla creada por el usuario 'N' es q sea unicode
 	BEGIN
 		CREATE TABLE ddbba.Sucursal (
-			id_sucursal INT IDENTITY(1,1) PRIMARY KEY,
+			id_sucursal INT IDENTITY(1,1) PRIMARY KEY NOT NULL,
 			localidad VARCHAR(100),
 			direccion VARCHAR(255),
 			horario VARCHAR(50),
@@ -34,7 +34,7 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Empleado') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Empleado (
-			id_empleado INT PRIMARY KEY,
+			id_empleado INT PRIMARY KEY not null,
 			nombre VARCHAR(100),
 			apellido VARCHAR(100),
 			dni INT,
@@ -44,7 +44,7 @@ IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G0
 			email_empresarial VARCHAR(255),
 			turno VARCHAR(50),
 			cargo VARCHAR(50),
-			id_sucursal INT,
+			id_sucursal INT not null,
 			CONSTRAINT FKEmpleado FOREIGN KEY (id_sucursal) REFERENCES ddbba.Sucursal(id_sucursal), 
 		);
 		PRINT 'Tabla Empelado creada correctamente.';
@@ -57,7 +57,7 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Proveedor') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba .Proveedor (
-			id_proveedor INT IDENTITY(1,1) PRIMARY KEY,
+			id_proveedor INT IDENTITY(1,1) PRIMARY KEY not null,
 			nombre NVARCHAR(255)
 		);
 		PRINT 'Tabla Proveedor creada correctamente.';
@@ -70,7 +70,7 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Producto') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Producto (
-			id_producto INT IDENTITY(1,1) PRIMARY KEY,
+			id_producto INT IDENTITY(1,1) PRIMARY KEY not null,
 			nombre_producto VARCHAR(100), --marca
 			linea VARCHAR(50),
 			precio_unitario DECIMAL(10, 2),
@@ -90,8 +90,8 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Provee') AND type = N'U')
 	BEGIN 
 		CREATE TABLE ddbba.Provee (
-			id_proveedor INT,
-			id_producto INT,
+			id_proveedor INT not null,
+			id_producto INT not null,
 			CONSTRAINT PKProvee PRIMARY KEY (id_proveedor, id_producto),
 			CONSTRAINT FKProvee1 FOREIGN KEY (id_proveedor) REFERENCES ddbba.Proveedor(id_proveedor),
 			CONSTRAINT FKProvee2 FOREIGN KEY (id_producto) REFERENCES ddbba.Producto(id_producto)
@@ -106,7 +106,7 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Cliente') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Cliente (
-			id_cliente INT PRIMARY KEY,
+			id_cliente INT PRIMARY KEY not null,
 			genero VARCHAR(10),
 			tipo VARCHAR(10),
 			apellido VARCHAR(100),
@@ -123,7 +123,7 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.MedioPago') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.MedioPago (
-			id_mp INT IDENTITY (1,1) PRIMARY KEY,
+			id_mp INT IDENTITY (1,1) PRIMARY KEY not null,
 			tipo VARCHAR(50)
 		);
 		PRINT 'Tabla MedioPago creada correctamente.';
@@ -136,11 +136,11 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Pedido') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Pedido (
-			id_pedido INT IDENTITY(1,1) PRIMARY KEY, 
+			id_pedido INT IDENTITY(1,1) PRIMARY KEY not null, 
 			fecha_pedido DATE,
 			hora_pedido TIME,
-			id_cliente INT,
-			id_mp INT,
+			id_cliente INT not null,
+			id_mp INT not null,
 			iden_pago VARCHAR(50), 
 			CONSTRAINT FKCliente FOREIGN KEY (id_cliente) REFERENCES ddbba.Cliente(id_cliente),
 			CONSTRAINT FKPedido1 FOREIGN KEY (id_mp) REFERENCES ddbba.MedioPago (id_mp),
@@ -155,9 +155,9 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Venta') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Venta (
-			id_pedido INT, 
-			id_sucursal INT,
-			id_empleado INT,
+			id_pedido INT not null, 
+			id_sucursal INT not null,
+			id_empleado INT not null,
 			CONSTRAINT PKVenta PRIMARY KEY (id_sucursal, id_pedido),
 			CONSTRAINT FKVenta1 FOREIGN KEY (id_sucursal) REFERENCES ddbba.Sucursal (id_sucursal),
 			CONSTRAINT FKVenta2 FOREIGN KEY (id_pedido) REFERENCES ddbba.Pedido (id_pedido),
@@ -173,9 +173,9 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Tiene') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Tiene (
-			id_producto INT,
-			id_pedido INT,
-			cantidad INT,
+			id_producto INT not null,
+			id_pedido INT not null,
+			cantidad INT not null,
 			CONSTRAINT PKTiene PRIMARY KEY (id_producto, id_pedido),
 			CONSTRAINT FKTiene1 FOREIGN KEY (id_producto) REFERENCES ddbba.Producto(id_producto),
 			CONSTRAINT FKTiene2 FOREIGN KEY (id_pedido) REFERENCES ddbba.Pedido(id_pedido)
@@ -190,10 +190,11 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Factura') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Factura (
-			id_factura VARCHAR(15) CHECK (id_factura LIKE '[0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9]'),
+			id_factura VARCHAR(15) CHECK (id_factura LIKE '[0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9]') not null,
 			tipo_factura CHAR(1),
-			id_pedido INT,
+			id_pedido INT not null,
 			fecha DATE,
+			estado VARCHAR(10)
 			CONSTRAINT PKFactura PRIMARY KEY (id_factura, id_pedido),
 			CONSTRAINT FKFactura FOREIGN KEY (id_pedido) REFERENCES ddbba.Pedido(id_pedido),
 		);
@@ -366,7 +367,8 @@ CREATE PROCEDURE ddbba.insertarFactura
 		@id_factura VARCHAR(15),
 		@tipo_factura CHAR(3),
 		@id_pedido INT,
-		@fecha DATE
+		@fecha DATE,
+		@estado VARCHAR(10)
 AS
 BEGIN	
 		-- Validación de id de la factura cumpla con la forma XXX-XX-XXXX
@@ -397,10 +399,16 @@ BEGIN
 		BEGIN
 			PRINT 'Error: la fecha no puede ser futura';
 			RETURN;
-		END;	
+		END;
+		--validadcion de que el estado sea 'Pagado' o 'NoPagado'
+		IF @estado NOT IN ('Pagado', 'NoPagado')
+		BEGIN
+			PRINT 'Error: el estado debe ser Pagado o NoPagado';
+			RETURN;
+		END;
 	
-	INSERT INTO ddbba.Factura (id_factura,tipo_factura,id_pedido,fecha)
-	VALUES (@id_factura,@tipo_factura,@id_pedido,@fecha);
+	INSERT INTO ddbba.Factura (id_factura,tipo_factura,id_pedido,fecha,estado)
+	VALUES (@id_factura,@tipo_factura,@id_pedido,@fecha,@estado);
 	PRINT 'Factura ingresada correctamente.';
 END;
 go
