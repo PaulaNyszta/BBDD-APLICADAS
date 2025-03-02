@@ -189,8 +189,6 @@ ELSE
 go
 
 
-
-
 ---------------------------------------------SP--------------------------------------------------------------------
 =======
 --creacion de los Store Procedure que validan la insercion de los datos a las tablas anteriores
