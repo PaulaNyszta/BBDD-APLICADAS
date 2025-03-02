@@ -219,15 +219,6 @@ IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'Procedimientos')
 	END;
 go
 
---creacion de los Store Procedure que validan la insercion de los datos a las tablas anteriores
---Crear el Schema nuevo para unicamente los SP
-IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'Procedimientos')
-	BEGIN
-		EXEC('CREATE SCHEMA Procedimientos');
-		PRINT ' Schema Procedimientos creado exitosamente';
-	END;
-go
-
 -- SP PARA CLIENTE
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarCliente')
 BEGIN
@@ -434,11 +425,6 @@ BEGIN
 END;
 go
 
-
-
-
-
-
 --SP PARA PRODUCTO
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarProducto')
 BEGIN
@@ -600,5 +586,159 @@ BEGIN
 
 INSERT INTO ddbba.NotaCredito(fecha_emision,id_cliente,id_factura,nombre_producto,precio_unitario, cantidad,monto) VALUES (@fecha_emision,@id_cliente,@id_factura,@nombre_producto,@precio_unitario, @cantidad,@monto);
 PRINT 'Valores insertados correctamente'
+END;
+go
+
+--SP PARA MEDIO DE PAGO
+IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarMedioPago')
+BEGIN
+	DROP PROCEDURE Procedimientos.insertarMedioPago ;
+END;
+go
+CREATE PROCEDURE Procedimientos.insertarMedioPago
+		@tipo VARCHAR(50)
+AS
+BEGIN
+
+	--validar que el medio de pago sea Credit card, Cash, Ewallet
+	IF  @tipo NOT IN ('Credit card','Cash','Ewallet')
+	BEGIN
+		PRINT 'el medio de pago debe ser Credit card, Cash o Ewallet';
+		RETURN;
+	END;
+	
+	--cambiamos el medio de pago a espaniol
+		IF @tipo IN ('Credit card')
+			SET @tipo = 'Tarjeta de credito';
+		IF @tipo IN ('Cash')
+			SET @tipo = 'Efectivo';
+		IF @tipo IN ('Ewallet')
+			SET @tipo = 'Billetera Electronica';
+
+	--validar que el medio de pago no exista
+	IF  EXISTS (SELECT 1 FROM ddbba.MedioPago WHERE @tipo = tipo)
+	BEGIN
+		PRINT 'medio de pago ya existente';
+		RETURN;
+	END;
+
+	INSERT INTO ddbba.MedioPago VALUES (@tipo);
+	PRINT 'Medio de Pago ingresado correctamente.';
+
+END;
+go
+--SP PARA SUCURSAL
+IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarSucursal')
+BEGIN
+	DROP PROCEDURE Procedimientos.insertarSucursal ;
+END;
+go
+CREATE PROCEDURE Procedimientos.insertarSucursal 
+	@localidad VARCHAR(100),
+	@direccion VARCHAR(255),
+	@horario VARCHAR(50),
+	@telefono VARCHAR(20)
+AS
+BEGIN
+
+	-- Validación de id_sucursal sea unico 
+	IF EXISTS (SELECT 1 FROM Procedimientos.Sucursal WHERE @localidad=localidad and @direccion=direccion) 
+	BEGIN
+		PRINT 'id sucursal ya existente';
+        RETURN;
+    END
+    --validacion de que la localidad se Ramos Mejia, Lomas del Mirador o San Justo
+	IF @localidad NOT IN ('Ramos Mejia','Lomas del Mirador','San Justo')
+	BEGIN
+		PRINT 'la localidad debe ser Ramos Mejia,Lomas del Mirador o San Justo';
+		RETURN;
+	END;
+	--validar que el telefono tenga 9 caracteres
+	IF LEN(@telefono)!=9 
+	BEGIN
+		PRINT 'el telefono debe tener entre 9 caracteres.';
+		RETURN;
+	END;
+    
+    INSERT INTO ddbba.Sucursal (localidad,direccion,horario,telefono)
+    VALUES (@localidad,@direccion,@horario,@telefono);
+    
+    PRINT 'Sucursal insertada correctamente';
+END;
+go
+
+--SP PARA PROVEEDOR
+IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarProveedor')
+BEGIN
+	DROP PROCEDURE Procedimientos.insertarProveedor ;
+END;
+go
+CREATE PROCEDURE Procedimientos.insertarProveedor
+    @nombre NVARCHAR(255)
+AS
+BEGIN
+        -- Validar que el nombre no sea nulo 
+        IF (@nombre IS NULL)
+        BEGIN
+            PRINT 'El nombre del proveedor no puede ser nulo.'
+            RETURN; 
+        END;
+
+        -- Validar que el proveedor no exista ya en la tabla
+        IF EXISTS (SELECT 1 FROM ddbba.Proveedor WHERE nombre = @nombre)
+        BEGIN
+            PRINT 'El proveedor ya existe en la tabla Proveedor.'
+            RETURN;
+        END
+
+        -- Insertar los datos en la tabla
+        INSERT INTO ddbba.Proveedor (nombre)
+        VALUES (@nombre)
+        PRINT 'Proveedor insertado correctamente.';
+ 
+END;
+go
+
+--SP PARA Productos_Solicitados
+IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'Productos_Solicitados')
+BEGIN
+	DROP PROCEDURE Procedimientos.Productos_Solicitados;
+END;
+go
+CREATE PROCEDURE Procedimientos.Productos_Solicitados
+	@id_pedido INT,
+	@id_producto INT,
+	@cantidad INT
+AS
+
+BEGIN
+	--verificar que no se inserten datos iguales
+	if  EXISTS (SELECT 1 FROM Procedimientos.Productos_Solicitados WHERE id_producto = @id_producto and @id_pedido=id_pedido )
+	BEGIN
+		PRINT 'El pedido ya tiene esos datos'
+		RETURN;
+	END;
+	--verificar si el producto existe
+	if NOT EXISTS (SELECT 1 FROM ddbba.Producto WHERE id_producto = @id_producto )
+	BEGIN
+		PRINT 'El producto no existe'
+		RETURN;
+	END;
+	--verificar que el pedido existe
+	if NOT EXISTS (SELECT 1 FROM ddbba.Pedido WHERE id_pedido = @id_pedido )
+	BEGIN
+		PRINT 'El pedido no existe'
+		RETURN;
+	END;
+	--verificar que la cantidad pedida es mayor a cero
+	if(@cantidad <= 0)
+	BEGIN 
+		PRINT 'La cantidad debe ser mayor a cero'
+		RETURN;
+	END;
+
+	INSERT INTO ddbba.Productos_Solicitados(id_producto, id_pedido, cantidad)
+    VALUES (@id_producto, @id_pedido, @cantidad);
+	PRINT 'Valores insertados correctamente'
 END;
 go
