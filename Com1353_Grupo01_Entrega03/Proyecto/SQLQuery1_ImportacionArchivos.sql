@@ -6,79 +6,64 @@ Use Com1353G01
 -- 1. Procedimiento Almacenado para importar Electronic accessories.xlsx
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_ElectronicAccessories') 
 BEGIN
-	 DROP PROCEDURE Importar_ElectronicAccessories;
-	 PRINT 'SP Importar_ElectronicAccessories ya existe -- > se borro';
+    DROP PROCEDURE Importar_ElectronicAccessories;
+    PRINT 'SP Importar_ElectronicAccessories ya existe --> se borró';
 END;
-go
+GO
+
 CREATE PROCEDURE Importar_ElectronicAccessories
-	@RutaArchivo NVARCHAR(255)
+    @RutaArchivo NVARCHAR(255)
 AS
 BEGIN
-	--creat tabla temporal para cargar los datos
-	CREATE TABLE #Temp (
-		id INT IDENTITY(1,1),
-		precio_unitario DECIMAL(10,2),
-		nombre_producto VARCHAR(100),
-		moneda VARCHAR(7))
-		
+    SET NOCOUNT ON;
 
-		-- Importar datos desde Excel a #temp
-	DECLARE @SQL NVARCHAR(MAX);
-	SET @SQL ='
-	
-	INSERT INTO #Temp (nombre_producto, precio_unitario, moneda)
-	SELECT Product, [Precio Unitario en dolares], ''USD''
-	FROM OPENROWSET(''Microsoft.ACE.OLEDB.12.0'',
-		''Excel 12.0;Database=' + @RutaArchivo + ';HDR=YES'',
-		''SELECT [Product], [Precio Unitario en dolares] FROM [Sheet1$]'')';
-	EXEC sp_executesql @SQL; --consultas dinamicas
+    -- Crear tabla temporal para cargar los datos
+    CREATE TABLE #Temp (
+        nombre_producto VARCHAR(100),
+        precio_unitario DECIMAL(10,2),
+        moneda VARCHAR(7)
+    );
 
-	--paso el contenido de 3temp como parametros para sp insertarproducto
+    -- Importar datos desde Excel a #Temp
+    DECLARE @SQL NVARCHAR(MAX);
+    SET @SQL = '
+    INSERT INTO #Temp (nombre_producto, precio_unitario, moneda)
+    SELECT Product, [Precio Unitario en dolares], ''USD''
+    FROM OPENROWSET(''Microsoft.ACE.OLEDB.12.0'',
+        ''Excel 12.0;Database=' + @RutaArchivo + ';HDR=YES'',
+        ''SELECT [Product], [Precio Unitario en dolares] FROM [Sheet1$]'')';
+    
+    EXEC sp_executesql @SQL; -- Consulta dinámica para importar datos
 
-	DECLARE @contador INT = 1, @totalFilas INT;
-	SELECT @totalFilas = COUNT(*) FROM #Temp;
+    -- Insertar todos los productos en la tabla de productos sin bucles
+    INSERT INTO ddbba.Producto (nombre_producto, precio_unitario, linea, precio_referencia, unidad, cantidadPorunidad, moneda, fecha)
+    SELECT 
+        nombre_producto, 
+        precio_unitario, 
+        'Electrodomestico', -- línea de producto por defecto
+        0,  -- precio de referencia por defecto
+        '', -- unidad
+        '', -- cantidad por unidad
+        moneda, 
+        ''  -- fecha 
+    FROM #Temp;
 
-	WHILE @contador <= @totalFilas
-	BEGIN
-		DECLARE  @id INT, @nombre_producto VARCHAR(100), @precio_unitario DECIMAL(10,2), @moneda VARCHAR(7)
-		SELECT
-			@id = id, @nombre_producto = nombre_producto, @precio_unitario = precio_unitario, @moneda = moneda
-		FROM #Temp WHERE id = @contador;
+    -- Eliminar la tabla temporal
+    DROP TABLE #Temp;
 
-		EXEC ddbba.insertarProducto 
-			@nombre_producto,
-			@precio_unitario, --precio unitario
-			'Electrodomestico', --linea
-			0, --precio ref
-			'', --unidad
-			'', --cantxunidad
-			@moneda, --moneda
-			'' --fecha
-		SET @contador = @contador + 1;
-	END;
-
-	DROP TABLE #Temp;
+    PRINT 'Importación completada correctamente.';
 END;
-go
+GO
 
-<<<<<<< HEAD
---ejecutar el Store procedure
-EXEC Importar_ElectronicAccessories 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Productos\Electronic accessories.xlsx';
-go
-----fijarse
-SELECT * FROM ddbba.Producto
---para solucionar error 7099, 7050 Win+R -->services.msc -->SQL Server (SQLEXPRESS)--> propiedades-->iniciar sesion-->cabiar a "Cuenta del sistema local", Marca la casilla "Permitir que el servicio interactúe con el escritorio".
 
-	/*--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos---------------------------------------------------------------------------
-=======
-	--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos---------------------------------------------------------------------------
->>>>>>> c917d293e55f04979b72a0a0cd6e9eadd110c714
+	--FIJARSE
+	SELECT * FROM ddbba.Producto
+
+	-----EJECUTAR EL STORE PROCEDURE--------------debe colocar la ruta a sus archivos---------------------------------------------------------------------------
+	EXEC Importar_ElectronicAccessories 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Productos\Electronic accessories.xlsx';
 	EXEC Importar_ElectronicAccessories 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Electronic accessories.xlsx';
 	-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-	/*----OBSERVAR INSERCION
-	SELECT * FROM ddbba.Producto
-	*/
-<<<<<<< HEAD
+	--para solucionar error 7099, 7050 Win+R -->services.msc -->SQL Server (SQLEXPRESS)--> propiedades-->iniciar sesion-->cabiar a "Cuenta del sistema local", Marca la casilla "Permitir que el servicio interactúe con el escritorio".
 
 
 
@@ -765,7 +750,7 @@ SELECT * FROM ddbba.Producto
 go
 
 
-<<<<<<< HEAD
+
 
 --CODIGO COMPLEMENTARIO PARA PODER EJECUTAR TODO JUNTO
 /*
@@ -790,13 +775,11 @@ CREATE PROCEDURE Borrar
 AS
 BEGIN
 	DROP TABLE ddbba.NotaCredito 
-	 DROP TABLE ddbba.Factura
-	DROP TABLE ddbba.Tiene
-	DROP TABLE ddbba.Venta
+	DROP TABLE ddbba.Productos_Solicitados
 	DROP TABLE ddbba.Pedido
 	DROP TABLE ddbba.MedioPago
 	DROP TABLE ddbba.Cliente
-	DROP TABLE ddbba.Provee
+	DROP TABLE ddbba.Proveedor_provee
 	DROP TABLE ddbba.Producto
 	DROP TABLE ddbba.Proveedor
 	DROP TABLE ddbba.Empleado

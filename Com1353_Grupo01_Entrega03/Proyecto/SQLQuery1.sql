@@ -63,7 +63,7 @@ go
 --TABLA PROVEEDOR
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Proveedor') AND type = N'U')
 	BEGIN
-		CREATE TABLE ddbba .Proveedor (
+		CREATE TABLE ddbba.Proveedor (
 			id_proveedor INT IDENTITY(1,1) PRIMARY KEY,
 			nombre NVARCHAR(255)
 		);
@@ -112,6 +112,7 @@ ELSE
 		PRINT 'La tabla Proveedor_provee ya existe.';
 	END;
 go
+
 --TABLA CLIENTE
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Cliente') AND type = N'U')
 	BEGIN
@@ -591,7 +592,7 @@ go
 --SP PARA MEDIO DE PAGO
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarMedioPago')
 BEGIN
-	DROP PROCEDURE .insertarMedioPago ;
+	DROP PROCEDURE Procedimientos.insertarMedioPago ;
 END;
 go
 CREATE PROCEDURE Procedimientos.insertarMedioPago
