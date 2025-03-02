@@ -23,7 +23,7 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Sucursal') AND type = N'U') -- 'U' tabla creada por el usuario 'N' es q sea unicode
 	BEGIN
 		CREATE TABLE ddbba.Sucursal (
-			id_sucursal INT IDENTITY(1,1) PRIMARY KEY NOT NULL,
+			id_sucursal INT IDENTITY(1,1) PRIMARY KEY,
 			localidad VARCHAR(100),
 			direccion VARCHAR(255),
 			horario VARCHAR(50),
@@ -40,7 +40,7 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Empleado') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Empleado (
-			id_empleado INT PRIMARY KEY not null,
+			id_empleado INT PRIMARY KEY,
 			nombre VARCHAR(100),
 			apellido VARCHAR(100),
 			dni INT,
@@ -50,7 +50,7 @@ IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G0
 			email_empresarial VARCHAR(255),
 			turno VARCHAR(50),
 			cargo VARCHAR(50),
-			id_sucursal INT not null,
+			id_sucursal INT,
 			CONSTRAINT FKEmpleado FOREIGN KEY (id_sucursal) REFERENCES ddbba.Sucursal(id_sucursal), 
 		);
 		PRINT 'Tabla Empelado creada correctamente.';
@@ -64,7 +64,7 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Proveedor') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba .Proveedor (
-			id_proveedor INT IDENTITY(1,1) PRIMARY KEY not null,
+			id_proveedor INT IDENTITY(1,1) PRIMARY KEY,
 			nombre NVARCHAR(255)
 		);
 		PRINT 'Tabla Proveedor creada correctamente.';
@@ -78,7 +78,7 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Producto') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Producto (
-			id_producto INT IDENTITY(1,1) PRIMARY KEY not null,
+			id_producto INT IDENTITY(1,1) PRIMARY KEY,
 			nombre_producto VARCHAR(100), --marca
 			linea VARCHAR(50),
 			precio_unitario DECIMAL(10, 2),
@@ -95,28 +95,28 @@ ELSE
 		PRINT 'La tabla Producto ya existe.';
 	END;
 go
---TABLA PROVEE
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Provee') AND type = N'U')
+--TABLA PROVEEDOR_PROVEE
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Proveedor_provee') AND type = N'U')
 	BEGIN 
-		CREATE TABLE ddbba.Provee (
-			id_proveedor INT not null,
-			id_producto INT not null,
+		CREATE TABLE ddbba.Proveedor_provee(
+			id_proveedor INT,
+			id_producto INT,
 			CONSTRAINT PKProvee PRIMARY KEY (id_proveedor, id_producto),
 			CONSTRAINT FKProvee1 FOREIGN KEY (id_proveedor) REFERENCES ddbba.Proveedor(id_proveedor),
 			CONSTRAINT FKProvee2 FOREIGN KEY (id_producto) REFERENCES ddbba.Producto(id_producto)
 		);
-		PRINT 'Tabla Provee creada correctamente.';
+		PRINT 'Tabla Proveedor_provee creada correctamente.';
 	END
 ELSE
 	BEGIN
-		PRINT 'La tabla Provee ya existe.';
+		PRINT 'La tabla Proveedor_provee ya existe.';
 	END;
 go
 --TABLA CLIENTE
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Cliente') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Cliente (
-			id_cliente INT PRIMARY KEY not null,
+			id_cliente INT PRIMARY KEY,
 			genero VARCHAR(10),
 			tipo VARCHAR(10),
 			apellido VARCHAR(100),
@@ -134,7 +134,7 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.MedioPago') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.MedioPago (
-			id_mp INT IDENTITY (1,1) PRIMARY KEY not null,
+			id_mp INT IDENTITY (1,1) PRIMARY KEY,
 			tipo VARCHAR(50)
 		);
 		PRINT 'Tabla MedioPago creada correctamente.';
