@@ -148,14 +148,22 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Pedido') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Pedido (
-			id_pedido INT IDENTITY(1,1) PRIMARY KEY not null, 
+			id_pedido INT IDENTITY(1,1) PRIMARY KEY, 
 			fecha_pedido DATE,
 			hora_pedido TIME,
-			id_cliente INT not null,
-			id_mp INT not null,
-			iden_pago VARCHAR(50), 
-			CONSTRAINT FKCliente FOREIGN KEY (id_cliente) REFERENCES ddbba.Cliente(id_cliente),
-			CONSTRAINT FKPedido1 FOREIGN KEY (id_mp) REFERENCES ddbba.MedioPago (id_mp),
+			id_cliente INT ,
+			id_mp INT,
+			iden_pago VARCHAR(50),
+			id_empleado INT,
+			id_sucursal INT,
+			id_factura CHAR(12) CHECK (id_factura LIKE '[0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9]') PRIMARY KEY,
+            tipo_factura CHAR(1) CHECK (tipo_factura IN ('A', 'B', 'C')),
+			fecha_factura DATE,
+			estado_factura VARCHAR(10) CHECK (estado_factura IN ('Pagada', 'NoPagada')),
+			CONSTRAINT FKPedido1 FOREIGN KEY (id_cliente) REFERENCES ddbba.Cliente(id_cliente),
+			CONSTRAINT FKPedido2 FOREIGN KEY (id_mp) REFERENCES ddbba.MedioPago (id_mp),
+			CONSTRAINT FKPedido3 FOREIGN KEY (id_empleado) REFERENCES ddbba.Empleado (id_empleado),
+			CONSTRAINT FKPedido4 FOREIGN KEY (id_sucursal) REFERENCES ddbba.Sucursal (id_sucursal)
 		); 
 		PRINT 'Tabla Pedido creada correctamente.';
 	END
@@ -164,64 +172,32 @@ ELSE
 		PRINT 'La tabla Pedido ya existe.';
 	END;
 go
---TABLA VENTA
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Venta') AND type = N'U')
+
+--TABLA Productos_Solicitados
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Productos_Solicitados') AND type = N'U')
 	BEGIN
-		CREATE TABLE ddbba.Venta (
-			id_pedido INT not null, 
-			id_sucursal INT not null,
-			id_empleado INT not null,
-			CONSTRAINT PKVenta PRIMARY KEY (id_sucursal, id_pedido),
-			CONSTRAINT FKVenta1 FOREIGN KEY (id_sucursal) REFERENCES ddbba.Sucursal (id_sucursal),
-			CONSTRAINT FKVenta2 FOREIGN KEY (id_pedido) REFERENCES ddbba.Pedido (id_pedido),
-			CONSTRAINT FKVenta3 FOREIGN KEY (id_empleado) REFERENCES ddbba.Empleado (id_empleado),
-		); 
-		PRINT 'Tabla Venta creada correctamente.';
-	END
-ELSE
-	BEGIN
-		PRINT 'La tabla Venta ya existe.';
-	END;
-go
---TABLA TIENE
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Tiene') AND type = N'U')
-	BEGIN
-		CREATE TABLE ddbba.Tiene (
-			id_producto INT not null,
-			id_pedido INT not null,
-			cantidad INT not null,
+		CREATE TABLE ddbba.Productos_Solicitados (
+			id_producto INT,
+			id_pedido INT ,
+			cantidad INT,
 			CONSTRAINT PKTiene PRIMARY KEY (id_producto, id_pedido),
 			CONSTRAINT FKTiene1 FOREIGN KEY (id_producto) REFERENCES ddbba.Producto(id_producto),
 			CONSTRAINT FKTiene2 FOREIGN KEY (id_pedido) REFERENCES ddbba.Pedido(id_pedido)
 		);
-		PRINT 'Tabla Tiene creada correctamente.';
+		PRINT 'Tabla Productos_Solicitados creada correctamente.';
 	END
 ELSE
 	BEGIN
-		PRINT 'La tabla Tiene ya existe.';
-	END;
-go
---TABLA FACTURA
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Factura') AND type = N'U')
-	BEGIN
-		CREATE TABLE ddbba.Factura (
-			id_factura VARCHAR(15) CHECK (id_factura LIKE '[0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9]') not null,
-			tipo_factura CHAR(1),
-			id_pedido INT not null,
-			fecha DATE,
-			estado VARCHAR(10),
-			CONSTRAINT PKFactura PRIMARY KEY (id_factura, id_pedido),
-			CONSTRAINT FKFactura FOREIGN KEY (id_pedido) REFERENCES ddbba.Pedido(id_pedido),
-		);
-		PRINT 'Tabla Factura creada correctamente.';
-	END
-ELSE
-	BEGIN
-		PRINT 'La tabla Factura ya existe.';
+		PRINT 'La tabla Productos_Solicitados ya existe.';
 	END;
 go
 
+
+
+
+---------------------------------------------SP--------------------------------------------------------------------
 --creacion de los Store Procedure que validan la insercion de los datos a las tablas anteriores
+>>>>>>> c917d293e55f04979b72a0a0cd6e9eadd110c714
 -- SP PARA CLIENTE
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarCliente')
 BEGIN
@@ -714,7 +690,6 @@ INSERT INTO ddbba.Provee (id_proveedor,id_producto) VALUES (@id_prov,@id_prod);
 PRINT 'Valores insertados correctamente'
 END;
 go
-
 
 
 

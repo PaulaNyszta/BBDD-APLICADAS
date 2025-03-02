@@ -61,13 +61,33 @@ BEGIN
 END;
 go
 
+<<<<<<< HEAD
+--ejecutar el Store procedure
+EXEC Importar_ElectronicAccessories 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Productos\Electronic accessories.xlsx';
+go
+----fijarse
+SELECT * FROM ddbba.Producto
+--para solucionar error 7099, 7050 Win+R -->services.msc -->SQL Server (SQLEXPRESS)--> propiedades-->iniciar sesion-->cabiar a "Cuenta del sistema local", Marca la casilla "Permitir que el servicio interactúe con el escritorio".
+
+	/*--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos---------------------------------------------------------------------------
+=======
 	--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos---------------------------------------------------------------------------
+>>>>>>> c917d293e55f04979b72a0a0cd6e9eadd110c714
 	EXEC Importar_ElectronicAccessories 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Electronic accessories.xlsx';
 	-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 	/*----OBSERVAR INSERCION
 	SELECT * FROM ddbba.Producto
 	*/
+<<<<<<< HEAD
+
+
+
+
+
+
+=======
 go
+>>>>>>> c917d293e55f04979b72a0a0cd6e9eadd110c714
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- 2. Procedimiento para importar Productos_importados.xlsx
@@ -148,7 +168,22 @@ END;
 go
 
 
+<<<<<<< HEAD
+
+--ejecutar el Store procedure
+EXEC Importar_Productos_importados 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Productos\Productos_importados.xlsx';
+go
+----fijarse
+SELECT * FROM ddbba.Producto
+select * from ddbba.Proveedor
+select * from ddbba.Provee
+----borrar el SP
+--DROP PROCEDURE Importar_Productos_importados
+
+	/*EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos---------------------------------------------------------------------------
+=======
 	--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos---------------------------------------------------------------------------
+>>>>>>> c917d293e55f04979b72a0a0cd6e9eadd110c714
 	EXEC Importar_Productos_importados 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Productos_importados.xlsx';
 	----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 	/*OBSERVAR INSERCION
@@ -159,7 +194,12 @@ go
 
 
 
+<<<<<<< HEAD
+
+
+=======
 go
+>>>>>>> c917d293e55f04979b72a0a0cd6e9eadd110c714
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- 3. Procedimiento para importar catalogo.csv
@@ -248,15 +288,32 @@ BEGIN
 END;
 go
 
+<<<<<<< HEAD
+
+--ejecutar el Store procedure
+EXEC Importar_Catalogo 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Productos\catalogo.csv', 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx'
+go
+----fijarse
+SELECT * FROM ddbba.Producto
+
+	/*EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos-------------------------ARCHIVO CATALOGO.CSV----------------------------------------------------------------------------------ARCHIVO INFROMSCION_COMPLEMENTARIA.XLSX-------------------------
+	EXEC Importar_Catalogo 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\catalogo.csv', 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx'
+=======
 	--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos-------------------------ARCHIVO CATALOGO.CSV----------------------------------------------------------------------------------ARCHIVO INFROMSCION_COMPLEMENTARIA.XLSX-------------------------
 	EXEC Importar_Catalogo 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\catalogo.csv', 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx';
+>>>>>>> c917d293e55f04979b72a0a0cd6e9eadd110c714
 	------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 	/*OBSERVAR INSERCION
 	SELECT * FROM ddbba.Producto
 	*/
 
 
+<<<<<<< HEAD
+
+
+=======
 go
+>>>>>>> c917d293e55f04979b72a0a0cd6e9eadd110c714
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- 4. Procedimiento para importar Informacion_complementaria.xlsx 
@@ -411,7 +468,19 @@ BEGIN
 END; --fin SP
 go
 
+<<<<<<< HEAD
+--ejecutar el Store procedure
+EXEC Importar_Informacion_complementaria 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx';
+go
+----fijarse
+SELECT * FROM ddbba.Sucursal
+SELECT * FROM ddbba.Empleado
+
+
+	/*EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos------------------------------------------------------------------
+=======
 	--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos------------------------------------------------------------------
+>>>>>>> c917d293e55f04979b72a0a0cd6e9eadd110c714
 	EXEC Importar_Informacion_complementaria 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx';
 	----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 	/*OBSERVAR INSERCION
@@ -661,8 +730,29 @@ BEGIN
 
 END;
 go
+<<<<<<< HEAD
+
+--ejecutar el Store procedure
+
+EXEC Importar_Ventas_registradas 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Ventas_registradas.csv'
+
+--fijarse
+SELECT * FROM ddbba.Pedido
+SELECT  * FROM ddbba.Cliente
+SELECT * FROM ddbba.Venta
+SELECT * FROM ddbba.Tiene
+SELECT * FROM ddbba.Factura
+SELECT * FROM ddbba.Empleado
+SELECT * FROM ddbba.Producto
+
+
+
+	/*EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos------------------------------------------------------------------
+	EXEC Importar_Ventas_registradas 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Ventas_registradas.csv'
+=======
 	--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos------------------------------------------------------------------
 	EXEC Importar_Ventas_registradas 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Ventas_registradas.csv';
+>>>>>>> c917d293e55f04979b72a0a0cd6e9eadd110c714
 	-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 	/*OBSERVAR INSERCION
 	SELECT * FROM ddbba.Pedido
@@ -675,6 +765,24 @@ go
 go
 
 
+<<<<<<< HEAD
+
+--CODIGO COMPLEMENTARIO PARA PODER EJECUTAR TODO JUNTO
+/*
+--EJECUTAR
+EXEC Importar_ElectronicAccessories 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Electronic accessories.xlsx';
+GO
+EXEC Importar_Productos_importados 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Productos_importados.xlsx';
+GO
+EXEC Importar_Catalogo 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\catalogo.csv', 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx'
+GO
+EXEC Importar_Informacion_complementaria 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx';
+GO
+EXEC Insertar_MediosDePago;
+GO
+EXEC Importar_Ventas_registradas 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Ventas_registradas.csv'
+=======
+>>>>>>> c917d293e55f04979b72a0a0cd6e9eadd110c714
 
 
 /*
@@ -695,9 +803,4 @@ BEGIN
 	DROP TABLE ddbba.Sucursal
 END;	
 */
-
-
-
-
-
 

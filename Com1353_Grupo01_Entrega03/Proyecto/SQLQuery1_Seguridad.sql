@@ -199,11 +199,17 @@ END;
 
 GO
 
+<<<<<<< HEAD
+
+
+DROP TRIGGER IF EXISTS trg_Empleado_Encrypt ;
+=======
 /*--INSERCION DE DATOS-----------------------------
 INSERT INTO ddbba.Empleado (id_empleado, nombre, apellido, dni, direccion, cuil, email_personal, email_empresarial, turno, cargo, id_sucursal)
 VALUES (500, 'Carlos', 'Gómez', 32456789, 'Av. Siempre Viva 123, Buenos Aires', '20-32456789-3', 'carlos.gomez@email.com', 'cgomez@empresa.com', 'Mañana', 'Analista de Datos', 3),
 (501, 'Mariana', 'López', 29876543, 'Calle Falsa 456, Córdoba', '27-29876543-5', 'mariana.lopez@email.com', 'mlopez@empresa.com', 'Tarde', 'Desarrolladora', 2);
 */
+>>>>>>> c917d293e55f04979b72a0a0cd6e9eadd110c714
 
 
 	/*-------VER LA TABLA ENCRIPTADA-----
