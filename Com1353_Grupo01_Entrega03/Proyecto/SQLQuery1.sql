@@ -157,7 +157,6 @@ IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G0
 			id_empleado INT,
 			id_sucursal INT,
             tipo_factura CHAR(1) CHECK (tipo_factura IN ('A', 'B', 'C')),
-			fecha_factura DATE,
 			estado_factura VARCHAR(10) CHECK (estado_factura IN ('Pagada', 'NoPagada')),
 			CONSTRAINT FKPedido1 FOREIGN KEY (id_cliente) REFERENCES ddbba.Cliente(id_cliente),
 			CONSTRAINT FKPedido2 FOREIGN KEY (id_mp) REFERENCES ddbba.MedioPago (id_mp),
@@ -212,7 +211,6 @@ GO
 
 ---------------------------------------------SP--------------------------------------------------------------------
 --creacion de los Store Procedure que validan la insercion de los datos a las tablas anteriores
-
 --Crear el Schema nuevo para unicamente los SP
 IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'Procedimientos')
 	BEGIN
@@ -220,7 +218,3 @@ IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'Procedimientos')
 		PRINT ' Schema Procedimientos creado exitosamente';
 	END;
 go
-
-
-
-
