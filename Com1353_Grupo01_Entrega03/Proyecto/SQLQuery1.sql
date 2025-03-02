@@ -148,7 +148,7 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Pedido') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Pedido (
-			id_pedido INT IDENTITY(1,1) PRIMARY KEY, 
+			id_factura CHAR(12)  CHECK (id_factura LIKE '[0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9]') PRIMARY KEY,
 			fecha_pedido DATE,
 			hora_pedido TIME,
 			id_cliente INT ,
@@ -156,7 +156,6 @@ IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G0
 			iden_pago VARCHAR(50),
 			id_empleado INT,
 			id_sucursal INT,
-			id_factura CHAR(12) CHECK (id_factura LIKE '[0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9]') PRIMARY KEY,
             tipo_factura CHAR(1) CHECK (tipo_factura IN ('A', 'B', 'C')),
 			fecha_factura DATE,
 			estado_factura VARCHAR(10) CHECK (estado_factura IN ('Pagada', 'NoPagada')),
@@ -177,12 +176,12 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Productos_Solicitados') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Productos_Solicitados (
-			id_producto INT,
-			id_pedido INT ,
+			id_factura char(12),
+			id_producto INT ,
 			cantidad INT,
-			CONSTRAINT PKTiene PRIMARY KEY (id_producto, id_pedido),
+			CONSTRAINT PKTiene PRIMARY KEY (id_producto, id_factura),
 			CONSTRAINT FKTiene1 FOREIGN KEY (id_producto) REFERENCES ddbba.Producto(id_producto),
-			CONSTRAINT FKTiene2 FOREIGN KEY (id_pedido) REFERENCES ddbba.Pedido(id_pedido)
+			CONSTRAINT FKTiene2 FOREIGN KEY (id_factura) REFERENCES ddbba.Pedido(id_factura)
 		);
 		PRINT 'Tabla Productos_Solicitados creada correctamente.';
 	END
@@ -197,14 +196,21 @@ go
 
 ---------------------------------------------SP--------------------------------------------------------------------
 --creacion de los Store Procedure que validan la insercion de los datos a las tablas anteriores
->>>>>>> c917d293e55f04979b72a0a0cd6e9eadd110c714
+--Crear el Schema nuevo para unicamente los SP
+IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'Procedimientos')
+	BEGIN
+		EXEC('CREATE SCHEMA Procedimientos');
+		PRINT ' Schema Procedimientos creado exitosamente';
+	END;
+go
+
 -- SP PARA CLIENTE
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarCliente')
 BEGIN
-	DROP PROCEDURE ddbba.insertarCliente ;
+	DROP PROCEDURE Procedimientos.insertarCliente ;
 END;
 go
-CREATE PROCEDURE ddbba.insertarCliente
+CREATE PROCEDURE Procedimientos.insertarCliente
 	@id INT,
 	@genero VARCHAR(50),
 	@tipo VARCHAR(10),
@@ -249,10 +255,10 @@ go
 -- SP PARA EMPLEADO
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarEmpleado')
 BEGIN
-	DROP PROCEDURE ddbba.insertarEmpleado ;
+	DROP PROCEDURE Procedimientos.insertarEmpleado ;
 END;
 go
-CREATE PROCEDURE ddbba.insertarEmpleado
+CREATE PROCEDURE Procedimientos.insertarEmpleado
 	@id_empleado INT,
 	@cuil VARCHAR(200),
 	@dni INT,
@@ -306,10 +312,11 @@ go
 -- SP PARA  PEDIDO
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarPedido')
 BEGIN
-	DROP PROCEDURE ddbba.insertarPedido ;
+	DROP PROCEDURE Procedimientos.insertarPedido ;
 END;
 go
-CREATE PROCEDURE ddbba.InsertarPedido (
+CREATE PROCEDURE Procedimientos.InsertarPedido (
+	@id_factura CHAR(12),
     @fecha_pedido DATE,
     @hora_pedido TIME,
     @id_cliente INT,
