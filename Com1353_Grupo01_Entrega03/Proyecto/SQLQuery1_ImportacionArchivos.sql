@@ -66,98 +66,83 @@ GO
 	--para solucionar error 7099, 7050 Win+R -->services.msc -->SQL Server (SQLEXPRESS)--> propiedades-->iniciar sesion-->cabiar a "Cuenta del sistema local", Marca la casilla "Permitir que el servicio interactúe con el escritorio".
 
 
-
-
-
-
-=======
-go
->>>>>>> c917d293e55f04979b72a0a0cd6e9eadd110c714
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- 2. Procedimiento para importar Productos_importados.xlsx
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_Productos_importados') 
 BEGIN
-	 DROP PROCEDURE Importar_Productos_importados;
-	 PRINT 'SP Importar_Productos_importados ya existe -- > se borro';
+    DROP PROCEDURE Importar_Productos_importados;
+    PRINT 'SP Importar_Productos_importados ya existe --> se borró';
 END;
-go
+GO
+
 CREATE PROCEDURE Importar_Productos_importados
     @RutaArchivo NVARCHAR(255)
 AS
 BEGIN
-    --crear tabla temporal para cargar los datos
-	CREATE TABLE #Temp (
-		id INT IDENTITY(1,1),
-		precio_unitario DECIMAL(10,2),
-		nombre_producto VARCHAR(100),
-		moneda VARCHAR(7),
-		linea VARCHAR(50),
-		cantidadPorUnidad NVARCHAR(50),
-		proveedor NVARCHAR(255))
+    SET NOCOUNT ON;
 
+    -- Crear tabla temporal para cargar los datos
+    CREATE TABLE #Temp (
+        nombre_producto NVARCHAR(255),
+        precio_unitario DECIMAL(10,2),
+        moneda VARCHAR(7),
+        linea VARCHAR(100),
+        cantidadPorUnidad NVARCHAR(50),
+        proveedor NVARCHAR(255)
+    );
 
+    -- Importar datos desde Excel a #Temp
     DECLARE @SQL NVARCHAR(MAX);
-    SET @SQL ='
-    INSERT INTO #Temp (nombre_producto, linea, cantidadPorUnidad, precio_unitario,proveedor, moneda)
-    SELECT [NombreProducto], [Categoría], [CantidadPorUnidad], [PrecioUnidad], [Proveedor],''ARS''
+    SET @SQL = '
+    INSERT INTO #Temp (nombre_producto, linea, cantidadPorUnidad, precio_unitario, proveedor, moneda)
+    SELECT [NombreProducto], [Categoría], [CantidadPorUnidad], [PrecioUnidad], [Proveedor], ''ARS''
     FROM OPENROWSET(''Microsoft.ACE.OLEDB.12.0'',
         ''Excel 12.0;Database=' + @RutaArchivo + ';HDR=YES'',
-        ''SELECT [NombreProducto], [Categoría], [CantidadPorUnidad], [PrecioUnidad],[Proveedor] FROM [Listado de Productos$]'')';
+        ''SELECT [NombreProducto], [Categoría], [CantidadPorUnidad], [PrecioUnidad], [Proveedor] FROM [Listado de Productos$]'')';
     
     EXEC sp_executesql @SQL;
 
-	--paso el contenido de #temp como parametros para sp insertarproducto
+    -- Insertar proveedores que no existen aún
+    INSERT INTO ddbba.Proveedor (nombre)
+    SELECT DISTINCT proveedor
+    FROM #Temp
+    WHERE NOT EXISTS (
+        SELECT 1 FROM ddbba.Proveedor p WHERE p.nombre = #Temp.proveedor
+    );
 
-	DECLARE @contador INT = 1, @totalFilas INT;
-	SELECT @totalFilas = COUNT(*) FROM #Temp;
+    -- Insertar productos
+    INSERT INTO ddbba.Producto (nombre_producto, precio_unitario, linea, precio_referencia, unidad, cantidadPorUnidad, moneda, fecha)
+    OUTPUT inserted.id_producto, inserted.nombre_producto INTO #ProductosInsertados (id_producto, nombre_producto)
+    SELECT 
+        nombre_producto, 
+        precio_unitario, 
+        linea, 
+        0,  -- precio de referencia por defecto
+        '', -- unidad
+        cantidadPorUnidad, 
+        moneda, 
+        ''  -- fecha (debe revisarse si es necesario manejarla de otra forma)
+    FROM #Temp;
 
-	WHILE @contador <= @totalFilas
-	BEGIN
-		DECLARE  @id INT, @nombre_producto NVARCHAR(255), @precio_unitario DECIMAL(10,2), @moneda VARCHAR(7), @linea VARCHAR(100), @cantidadPorUnidad NVARCHAR(50), @proveedor NVARCHAR(255) 
-		SELECT
-			@id = id, @nombre_producto = nombre_producto, @precio_unitario = precio_unitario, @moneda = moneda, @linea = linea, @cantidadPorUnidad = cantidadPorUnidad, @proveedor = proveedor
-		FROM #Temp WHERE id = @contador;
+    -- Insertar relaciones en Provee
+    INSERT INTO ddbba.Provee (id_proveedor, id_producto)
+    SELECT p.id_proveedor, pi.id_producto
+    FROM #ProductosInsertados pi
+    JOIN ddbba.Proveedor p ON pi.nombre_producto = p.nombre;
 
-		
-		EXEC ddbba.insertarProducto 
-			@nombre_producto,
-			@precio_unitario, --precio unitario
-			@linea, --linea
-			0, --precio ref
-			'', --unidad
-			@cantidadPorUnidad, --cantxunidad
-			@moneda, --moneda
-			'';--fecha
-			
-		--inserto tambien el proveedor en su tabla correspondiente
-		EXEC ddbba.insertarProveedor
-			@proveedor;
+    -- Eliminar la tabla temporal
+    DROP TABLE #Temp;
+    DROP TABLE #ProductosInsertados;
 
-		--inserto tambien el proveedor y producto en su tabla correspondienTE
-		DECLARE @id_proveedor int
-		SELECT @id_proveedor = id_proveedor
-		FROM ddbba.Proveedor
-		WHERE @proveedor = nombre
-
-		EXEC ddbba.insertarProvee
-			@id_proveedor,
-			@id --id de producto
-
-		SET @contador = @contador + 1;
-	END;
-
-	DROP TABLE #Temp;
-	
+    PRINT 'Importación completada correctamente.';
 END;
-go
-
-
-<<<<<<< HEAD
+GO
 
 --ejecutar el Store procedure
-EXEC Importar_Productos_importados 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Productos\Productos_importados.xlsx';
+EXEC Importar_Productos_importados 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Productos\Productos\Productos_importados.xlsx';
 go
+
+
 ----fijarse
 SELECT * FROM ddbba.Producto
 select * from ddbba.Proveedor
