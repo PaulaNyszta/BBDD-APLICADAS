@@ -482,7 +482,6 @@ END;
 go
 
 
-
 --SP PARA PROVEEDOR_PROVEE
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarProveedor_provee')
 BEGIN
@@ -592,7 +591,7 @@ go
 --SP PARA MEDIO DE PAGO
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarMedioPago')
 BEGIN
-	DROP PROCEDURE Procedimientos.insertarMedioPago ;
+	DROP PROCEDURE .insertarMedioPago ;
 END;
 go
 CREATE PROCEDURE Procedimientos.insertarMedioPago
@@ -622,7 +621,7 @@ BEGIN
 		RETURN;
 	END;
 
-	INSERT INTO ddbba.MedioPago VALUES (@tipo);
+	INSERT INTO ddbba.MedioPago (tipo) VALUES (@tipo);
 	PRINT 'Medio de Pago ingresado correctamente.';
 
 END;
@@ -642,9 +641,15 @@ AS
 BEGIN
 
 	-- Validación de id_sucursal sea unico 
-	IF EXISTS (SELECT 1 FROM Procedimientos.Sucursal WHERE @localidad=localidad and @direccion=direccion) 
+	IF EXISTS (SELECT 1 FROM ddbba.Sucursal WHERE @localidad=localidad and @direccion=direccion) 
 	BEGIN
 		PRINT 'id sucursal ya existente';
+        RETURN;
+    END
+	-- Validación de id_sucursal sea unico 
+	IF @direccion IS NULL
+	BEGIN
+		PRINT 'La direccion no debe ser nula';
         RETURN;
     END
     --validacion de que la localidad se Ramos Mejia, Lomas del Mirador o San Justo
@@ -700,20 +705,20 @@ END;
 go
 
 --SP PARA Productos_Solicitados
-IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'Productos_Solicitados')
+IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarProductos_Solicitados')
 BEGIN
-	DROP PROCEDURE Procedimientos.Productos_Solicitados;
+	DROP PROCEDURE Procedimientos.insertarProductos_Solicitados;
 END;
 go
-CREATE PROCEDURE Procedimientos.Productos_Solicitados
-	@id_pedido INT,
+CREATE PROCEDURE Procedimientos.insertarProductos_Solicitados
+	@id_factura CHAR(12),
 	@id_producto INT,
 	@cantidad INT
 AS
 
 BEGIN
 	--verificar que no se inserten datos iguales
-	if  EXISTS (SELECT 1 FROM Procedimientos.Productos_Solicitados WHERE id_producto = @id_producto and @id_pedido=id_pedido )
+	if  EXISTS (SELECT 1 FROM ddbba.Productos_Solicitados WHERE id_producto = @id_producto and @id_factura=id_factura )
 	BEGIN
 		PRINT 'El pedido ya tiene esos datos'
 		RETURN;
@@ -725,7 +730,7 @@ BEGIN
 		RETURN;
 	END;
 	--verificar que el pedido existe
-	if NOT EXISTS (SELECT 1 FROM ddbba.Pedido WHERE id_pedido = @id_pedido )
+	if NOT EXISTS (SELECT 1 FROM ddbba.Pedido WHERE @id_factura = id_factura )
 	BEGIN
 		PRINT 'El pedido no existe'
 		RETURN;
@@ -737,8 +742,8 @@ BEGIN
 		RETURN;
 	END;
 
-	INSERT INTO ddbba.Productos_Solicitados(id_producto, id_pedido, cantidad)
-    VALUES (@id_producto, @id_pedido, @cantidad);
+	INSERT INTO ddbba.Productos_Solicitados(id_producto, id_factura, cantidad)
+    VALUES (@id_producto, @id_factura, @cantidad);
 	PRINT 'Valores insertados correctamente'
 END;
 go
