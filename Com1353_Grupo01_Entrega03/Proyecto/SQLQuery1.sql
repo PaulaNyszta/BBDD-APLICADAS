@@ -340,10 +340,32 @@ CREATE PROCEDURE Procedimientos.InsertarPedido (
     @hora_pedido TIME,
     @id_cliente INT,
     @id_mp INT,
-    @iden_pago VARCHAR(50))
+    @iden_pago VARCHAR(50),
+	@id_empleado INT,
+	@id_sucursal int,
+	@tipo_factura CHAR(1),
+	@fecha_factura DATE,
+	@estado_factura VARCHAR(10))
 AS
 BEGIN
-	
+	-- Validación del que el id no sea Null
+	IF (@id_factura IS NULL)
+	BEGIN
+		PRINT 'Error. El id no puede ser Nulo.';
+		RETURN;
+	END;
+	-- Validación del que la fecha no sea Null
+	IF (@fecha_pedido IS NULL)
+	BEGIN
+		PRINT 'Error. La fecha de pedido no puede ser Nula.';
+		RETURN;
+	END;
+	-- Validación de que el medio de pago exista
+	IF NOT EXISTS (SELECT 1 FROM ddbba.MedioPago WHERE @id_mp=id_mp) 
+	BEGIN
+		PRINT'El Medio de pago no existe';
+		RETURN;
+	END; 
 	-- Validación de que el pedido sea un unico 
 	IF EXISTS (SELECT 1 FROM ddbba.Pedido WHERE @fecha_pedido = fecha_pedido and @hora_pedido=hora_pedido and @id_cliente=id_cliente and @id_mp=id_mp and iden_pago=@iden_pago) 
 	BEGIN
