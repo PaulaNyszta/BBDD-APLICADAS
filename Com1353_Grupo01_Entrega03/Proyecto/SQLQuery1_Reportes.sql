@@ -1,77 +1,90 @@
 --4. SCRIPT DE REPORTES  - 28/02/2025 - Com 1353 - Grupo 01 - Base de Datos Aplicadas, BARRIONUEVO LUCIANO [45429539], NYSZTA PAULA [45129511].
-
+Use Com1353G01; go;
 --ATENCION: puede ejecutar directamente el codigo para crear los SP que generan los reportes, luego podra ejecutar cada uno de ellos con la sintaxis de abajo DE CADA REPORTE
 --SI NO SE IMPORTAN LOS DATOS DEL SCPRIP 3 NO SE GENERARAN LOS REPORTES YA QUE NO HABRA DATOS DISPONIBLES
+--Crear el Schema
+IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'Rep')
+	BEGIN
+		EXEC('CREATE SCHEMA Rep');
+		PRINT ' Schema creado exitosamente';
+	END;
+go
 
 --REPORTE Mensual: ingresando un mes y año determinado mostrar el total facturado por días de la semana, incluyendo sábado y domingo.
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Reporte_FacturacionMensual_XML') 
 BEGIN
-	 DROP PROCEDURE Reporte_FacturacionMensual_XML;
-	 PRINT 'SP Reporte_FacturacionMensual_XML ya existe -- > se creara nuevamente';
+    DROP PROCEDURE Rep.Reporte_FacturacionMensual_XML;
+    PRINT 'SP Reporte_FacturacionMensual_XML ya existe -- > se creara nuevamente';
 END;
-go
-CREATE PROCEDURE Reporte_FacturacionMensual_XML
+GO
+CREATE PROCEDURE Rep.Reporte_FacturacionMensual_XML
     @Mes INT,
     @Anio INT
 AS
 BEGIN
-	--valida que se un mes valido 
-	IF @Mes>12 or @Mes<1
-	BEGIN
-		print 'mes invalido';
-		return;
-	END;
-	--valida que se un anio valido 
-	IF @Anio>YEAR(GETDATE()) or @Anio<1800
-	BEGIN
-		print 'Anio invalido';
-		return;
-	END;
+    -- Valida que se un mes válido
+    IF @Mes > 12 OR @Mes < 1
+    BEGIN
+        PRINT 'Mes inválido';
+        RETURN;
+    END;
+
+    -- Valida que sea un año válido
+    IF @Anio > YEAR(GETDATE()) OR @Anio < 1800
+    BEGIN
+        PRINT 'Año inválido';
+        RETURN;
+    END;
+
+    -- Consulta para obtener el total facturado por día de la semana 
     SELECT 
-        DATENAME(WEEKDAY, Ped.fecha_pedido) AS DiaSemana, --Obtiene el nombre del día de la semana
-        SUM(T.cantidad*P.precio_unitario) AS TotalFacturado 
-    FROM ddbba.Tiene T inner join ddbba.Producto P 
-			on T.id_producto=P.id_producto
-			inner join ddbba.Pedido Ped on Ped.id_pedido = T.id_pedido
-    WHERE MONTH(Ped.fecha_pedido) = @Mes AND YEAR(Ped.fecha_pedido) = @Anio
-    GROUP BY DATENAME(WEEKDAY, Ped.fecha_pedido) 
-    FOR XML PATH('Dia'), ROOT('FacturacionMensual'); 
-													
-	
+        DATENAME(WEEKDAY, Ped.fecha_pedido) AS DiaSemana, 
+        SUM(PS.cantidad * P.precio_unitario) OVER (PARTITION BY DATENAME(WEEKDAY, Ped.fecha_pedido)) AS TotalFacturado
+    FROM ddbba.ProductoSolicitado PS 
+    INNER JOIN ddbba.Producto P 
+        ON PS.id_producto = P.id_producto
+    INNER JOIN ddbba.Pedido Ped 
+        ON Ped.id_factura = PS.id_factura
+    WHERE MONTH(Ped.fecha_pedido) = @Mes 
+        AND YEAR(Ped.fecha_pedido) = @Anio
+    GROUP BY DATENAME(WEEKDAY, Ped.fecha_pedido)
+    ORDER BY MIN(Ped.fecha_pedido)
+    FOR XML PATH('Dia'), ROOT('FacturacionMensual');
 END;
-go
+GO
+
 
 		/*----------EJECUTAR------------------------
-		EXEC Reporte_FacturacionMensual_XML 02,2019
+		EXEC Rep.Reporte_FacturacionMensual_XML 02,2019
 		------------------------------------------*/
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
---REPORTE Trimestral: mostrar el total facturado por turnos de trabajo por mes.
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'ObtenerFacturacionPorTrimestreXML') 
 BEGIN
-	 DROP PROCEDURE ObtenerFacturacionPorTrimestreXML;
-	 PRINT 'SP ObtenerFacturacionPorTrimestreXML ya existe -- > se creara nuevamente';
+    DROP PROCEDURE Rep.ObtenerFacturacionPorTrimestreXML;
+    PRINT 'SP ObtenerFacturacionPorTrimestreXML ya existe -- > se creara nuevamente';
 END;
-go
-CREATE PROCEDURE ObtenerFacturacionPorTrimestreXML
+GO
+
+CREATE PROCEDURE Rep.ObtenerFacturacionPorTrimestreXML
     @Anio INT,
     @Trimestre INT
 AS
 BEGIN
-	--valida que se un anio valido 
-	IF @Anio>YEAR(GETDATE()) or @Anio<1800
-	BEGIN
-		print 'Anio invalido';
-		return;
-	END;
-	--valida que se un trimestre valido 
-	IF @Trimestre>4 or @Trimestre<1
-	BEGIN
-		print 'Trimestre invalido';
-		return;
-	END;
+    -- Valida que se un año válido
+    IF @Anio > YEAR(GETDATE()) OR @Anio < 1800
+    BEGIN
+        PRINT 'Año inválido';
+        RETURN;
+    END;
 
+    -- Valida que se un trimestre válido
+    IF @Trimestre > 4 OR @Trimestre < 1
+    BEGIN
+        PRINT 'Trimestre inválido';
+        RETURN;
+    END;
 
     DECLARE @MesInicio INT, @MesFin INT;
 
@@ -95,13 +108,13 @@ BEGIN
     BEGIN
         SET @MesInicio = 10;
         SET @MesFin = 12;
-    END
+    END;
 
-    -- Generar consulta en formato XML
+    -- Generar consulta en formato XML usando funciones de ventana
     SELECT
         E.turno AS 'Turno',
         MONTH(F.fecha) AS 'Mes',
-        SUM(T.cantidad * PR.precio_unitario) AS 'TotalFacturado'
+        SUM(T.cantidad * PR.precio_unitario) OVER (PARTITION BY E.turno, MONTH(F.fecha)) AS 'TotalFacturado'
     FROM
         ddbba.Factura F
     JOIN ddbba.Pedido PED ON F.id_pedido = PED.id_pedido
@@ -112,13 +125,12 @@ BEGIN
     WHERE
         YEAR(F.fecha) = @Anio
         AND MONTH(F.fecha) BETWEEN @MesInicio AND @MesFin
-    GROUP BY
-        E.turno, MONTH(F.fecha)
     ORDER BY
         E.turno, MONTH(F.fecha)
     FOR XML PATH('Factura'), ROOT('Facturas');
 END;
-go
+GO
+
 		/*------------------EJECUTAR-------------------------------------------
 		EXEC ObtenerFacturacionPorTrimestreXML @Anio = 2019, @Trimestre = 1;
 		--------------------------------------------------------------------*/

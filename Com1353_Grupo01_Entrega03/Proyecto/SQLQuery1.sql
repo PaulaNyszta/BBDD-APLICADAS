@@ -96,7 +96,7 @@ ELSE
 	END;
 go
 --TABLA PROVEEDOR_PROVEE
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Proveedor_provee') AND type = N'U')
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.ProveedorProvee') AND type = N'U')
 	BEGIN 
 		CREATE TABLE ddbba.ProveedorProvee(
 			id_proveedor INT,
@@ -105,19 +105,18 @@ IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G0
 			CONSTRAINT FKProvee1 FOREIGN KEY (id_proveedor) REFERENCES ddbba.Proveedor(id_proveedor),
 			CONSTRAINT FKProvee2 FOREIGN KEY (id_producto) REFERENCES ddbba.Producto(id_producto)
 		);
-		PRINT 'Tabla Proveedor_provee creada correctamente.';
+		PRINT 'Tabla ProveedorProvee creada correctamente.';
 	END
 ELSE
 	BEGIN
-		PRINT 'La tabla Proveedor_provee ya existe.';
+		PRINT 'La tabla ProveedorProvee ya existe.';
 	END;
 go
-
 --TABLA CLIENTE
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Cliente') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Cliente (
-			id_cliente INT PRIMARY KEY,
+			id_cliente INT IDENTITY (1,1)PRIMARY KEY,
 			genero VARCHAR(10),
 			tipo VARCHAR(10),
 			apellido VARCHAR(100),

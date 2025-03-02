@@ -4,15 +4,21 @@
 Use Com1353G01
 -----------------------------------------------------------------------------------------------------------------------
 -- 1. Procedimiento Almacenado para importar Electronic accessories.xlsx
+--Crear el Schema
+IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'imp')
+	BEGIN
+		EXEC('CREATE SCHEMA imp');
+		PRINT ' Schema creado exitosamente';
+	END;
+go
 
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_ElectronicAccessories') 
 BEGIN
-    DROP PROCEDURE Importar_ElectronicAccessories;
+    DROP PROCEDURE imp.Importar_ElectronicAccessories;
     PRINT 'SP Importar_ElectronicAccessories ya existe --> se borró';
 END;
 GO
-
-CREATE PROCEDURE Importar_ElectronicAccessories
+CREATE PROCEDURE imp.Importar_ElectronicAccessories
     @RutaArchivo NVARCHAR(255)
 AS
 BEGIN
@@ -26,14 +32,6 @@ BEGIN
         fecha DATETIME DEFAULT GETDATE()
     );
 
-    -- Crear tabla de errores
-    CREATE TABLE #Errores (
-        nombre_producto VARCHAR(100),
-        precio_unitario DECIMAL(10,2),
-        moneda VARCHAR(7),
-        fecha DATETIME,
-        error_mensaje VARCHAR(255)
-    );
 
     -- Importar datos desde Excel a #Temp
     DECLARE @SQL NVARCHAR(MAX);
@@ -46,32 +44,8 @@ BEGIN
 
     EXEC sp_executesql @SQL;
 
-    -- Insertar productos con errores en #Errores
-    INSERT INTO #Errores (nombre_producto, precio_unitario, moneda, fecha, error_mensaje)
-    SELECT 
-        nombre_producto, 
-        precio_unitario, 
-        moneda, 
-        fecha,
-        CASE 
-            WHEN EXISTS (SELECT 1 FROM ddbba.Producto p WHERE p.nombre_producto = t.nombre_producto) 
-                THEN 'El producto ya existe en la tabla.'
-            WHEN precio_unitario <= 0 
-                THEN 'El precio del producto debe ser mayor a cero.'
-            WHEN moneda NOT IN ('USD', 'EUR', 'ARS') 
-                THEN 'La moneda debe ser USD, EUR o ARS.'
-            WHEN fecha > GETDATE() 
-                THEN 'La fecha del producto no debe ser futura.'
-            ELSE NULL
-        END AS error_mensaje
-    FROM #Temp t
-    WHERE 
-        EXISTS (SELECT 1 FROM ddbba.Producto p WHERE p.nombre_producto = t.nombre_producto)
-        OR precio_unitario <= 0
-        OR moneda NOT IN ('USD', 'EUR', 'ARS')
-        OR fecha > GETDATE();
-
-    -- Insertar productos válidos en ddbba.Producto
+  
+  -- Insertar productos válidos en ddbba.Producto
     INSERT INTO ddbba.Producto (nombre_producto, precio_unitario, linea, precio_referencia, unidad, cantidadPorunidad, moneda, fecha)
     SELECT 
         nombre_producto, 
@@ -82,23 +56,10 @@ BEGIN
         '', 
         moneda, 
         fecha
-    FROM #Temp
-    WHERE nombre_producto NOT IN (SELECT nombre_producto FROM #Errores);
-
-    -- Mostrar errores
-    IF EXISTS (SELECT 1 FROM #Errores)
-    BEGIN
-        PRINT 'Algunos productos no se pudieron insertar. Ver detalles:';
-        SELECT * FROM #Errores;
-    END
-    ELSE
-    BEGIN
-        PRINT 'Importación completada correctamente.';
-    END;
-
+    FROM #Temp 
+	
     -- Eliminar tablas temporales
     DROP TABLE #Temp;
-    DROP TABLE #Errores;
 END;
 GO
 
@@ -106,8 +67,8 @@ GO
 	SELECT * FROM ddbba.Producto
 
 	-----EJECUTAR EL STORE PROCEDURE--------------debe colocar la ruta a sus archivos---------------------------------------------------------------------------
-	EXEC Importar_ElectronicAccessories 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Productos\Electronic accessories.xlsx';
-	EXEC Importar_ElectronicAccessories 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Electronic accessories.xlsx';
+	EXEC imp.Importar_ElectronicAccessories 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Productos\Electronic accessories.xlsx';
+	EXEC imp.Importar_ElectronicAccessories 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Productos\Electronic accessories.xlsx';
 	-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 	--para solucionar error 7099, 7050 Win+R -->services.msc -->SQL Server (SQLEXPRESS)--> propiedades-->iniciar sesion-->cabiar a "Cuenta del sistema local", Marca la casilla "Permitir que el servicio interactúe con el escritorio".
 
@@ -116,11 +77,11 @@ GO
 -- 2. Procedimiento para importar Productos_importados.xlsx
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_Productos_importados') 
 BEGIN
-    DROP PROCEDURE Importar_Productos_importados;
+    DROP PROCEDURE imp.Importar_Productos_importados;
     PRINT 'SP Importar_ElectronicAccessories ya existe --> se borró';
 END;
 GO
-CREATE PROCEDURE Importar_Productos_importados
+CREATE PROCEDURE imp.Importar_Productos_importados
     @RutaArchivo NVARCHAR(255)
 AS
 BEGIN
@@ -136,11 +97,6 @@ BEGIN
         proveedor NVARCHAR(255)
     );
 
-    -- Crear tabla temporal para almacenar los productos insertados
-    CREATE TABLE #ProductosInsertados (
-        id_producto INT,
-        nombre_producto NVARCHAR(255)
-    );
 
     -- Importar datos desde Excel a #Temp
     DECLARE @SQL NVARCHAR(MAX);
@@ -153,17 +109,10 @@ BEGIN
     
     EXEC sp_executesql @SQL;
 
-    -- Insertar proveedores que no existen aún
-    INSERT INTO ddbba.Proveedor (nombre)
-    SELECT DISTINCT proveedor
-    FROM #Temp
-    WHERE NOT EXISTS (
-        SELECT 1 FROM ddbba.Proveedor p WHERE p.nombre = #Temp.proveedor
-    );
+ 
 
     -- Insertar productos
     INSERT INTO ddbba.Producto (nombre_producto, precio_unitario, linea, precio_referencia, unidad, cantidadPorUnidad, moneda, fecha)
-    OUTPUT inserted.id_producto, inserted.nombre_producto INTO #ProductosInsertados (id_producto, nombre_producto)
     SELECT 
         nombre_producto, 
         precio_unitario, 
@@ -203,11 +152,8 @@ select * from ddbba.Proveedor
 ----borrar el SP
 --DROP PROCEDURE Importar_Productos_importados
 
-	/*EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos---------------------------------------------------------------------------
-=======
 	--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos---------------------------------------------------------------------------
->>>>>>> c917d293e55f04979b72a0a0cd6e9eadd110c714
-	EXEC Importar_Productos_importados 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Productos_importados.xlsx';
+	EXEC imp.Importar_Productos_importados 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Productos\Productos_importados.xlsx';
 	----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 	/*OBSERVAR INSERCION
 	SELECT * FROM ddbba.Producto
@@ -215,24 +161,17 @@ select * from ddbba.Proveedor
 	select * from ddbba.Provee
 	*/
 
-
-
-<<<<<<< HEAD
-
-
-=======
 go
->>>>>>> c917d293e55f04979b72a0a0cd6e9eadd110c714
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- 3. Procedimiento para importar catalogo.csv
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_Catalogo') 
 BEGIN
-	 DROP PROCEDURE Importar_Catalogo;
+	 DROP PROCEDURE imp.Importar_Catalogo;
 	 PRINT 'SP Importar_Catalogo ya existe -- > se borro';
 END;
 go
-CREATE PROCEDURE Importar_Catalogo
+CREATE PROCEDURE imp.Importar_Catalogo
     @RutaArchivo NVARCHAR(255), @RutaArchivoClasificacion NVARCHAR(255)
 AS
 BEGIN 
@@ -275,87 +214,60 @@ BEGIN
     FROM OPENROWSET(''Microsoft.ACE.OLEDB.12.0'',
         ''Excel 12.0;Database=' + @RutaArchivoClasificacion + ';HDR=YES'',
         ''SELECT [Línea de producto],[Producto] FROM [Clasificacion productos$]'')';
-		EXEC sp_executesql @SQL;
-
-	--paso el contenido de #temp como parametros para sp insertarproducto
-	DECLARE @contador INT = 1, @totalFilas INT;
-	SELECT @totalFilas = COUNT(*) FROM #Temp;
-
-	WHILE @contador <= @totalFilas
-	BEGIN
-		DECLARE  @id INT, @nombre_producto VARCHAR(100), @linea VARCHAR(50), @precio_unitario DECIMAL(10,2), @precio_referencia DECIMAL(10,2), @unidad VARCHAR(10), @fecha DATETIME, @moneda VARCHAR(7)
-		SELECT
-			@id = id, @nombre_producto = nombre_producto, @precio_unitario = precio_unitario, @precio_referencia = precio_referencia,@unidad = unidad,@fecha = fecha
-		FROM #Temp WHERE id = @contador;
+		EXEC sp_executesql @SQL;	
 
 		--que la categoria del archivo coincida con la categorias de los productos
-		SELECT TOP 1 @linea = linea_clasificacion
-		FROM #Temp T inner join #Temp_clasificacion TC on T.linea=TC.tipo_producto
-		WHERE id = @contador;
+		DECLARE @linea VARCHAR(50);
+		SELECT @linea=linea_clasificacion
+		FROM #Temp_clasificacion tmpc INNER JOIN #Temp tmp ON tmp.linea=tmpc.tipo_producto
+		
 
-		EXEC ddbba.insertarProducto 
-			@nombre_producto,
-			@precio_unitario, --precio unitario
-			@linea, --linea
-			@precio_referencia, --precio ref
-			@unidad, --unidad
+		INSERT INTO ddbba.Producto (nombre_producto, precio_unitario, linea, precio_referencia, unidad, cantidadPorunidad, moneda, fecha)
+		SELECT 
+			nombre_producto,
+			precio_unitario, --precio unitario
+			(SELECT linea_clasificacion FROM #Temp_clasificacion WHERE tipo_producto=linea),
+			precio_referencia, --precio ref
+			unidad, --unidad
 			'', --cantxunidad
 			'ARS', --moneda
-			@fecha --fecha
-
-		SET @contador = @contador + 1;
-	END;
+			fecha --fecha
+		FROM #temp;
 
 	DROP TABLE #Temp;
 
 END;
 go
 
-<<<<<<< HEAD
 
---ejecutar el Store procedure
-EXEC Importar_Catalogo 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Productos\catalogo.csv', 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx'
-go
-----fijarse
-SELECT * FROM ddbba.Producto
-
-	/*EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos-------------------------ARCHIVO CATALOGO.CSV----------------------------------------------------------------------------------ARCHIVO INFROMSCION_COMPLEMENTARIA.XLSX-------------------------
-	EXEC Importar_Catalogo 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\catalogo.csv', 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx'
-=======
-	--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos-------------------------ARCHIVO CATALOGO.CSV----------------------------------------------------------------------------------ARCHIVO INFROMSCION_COMPLEMENTARIA.XLSX-------------------------
-	EXEC Importar_Catalogo 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\catalogo.csv', 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx';
->>>>>>> c917d293e55f04979b72a0a0cd6e9eadd110c714
+	--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos-------------------------ARCHIVO CATALOGO.CSV----------------------------------------------------ARCHIVO INFROMSCION_COMPLEMENTARIA.XLSX-------------------------
+	EXEC imp.Importar_Catalogo 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Productos\catalogo.csv', 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Informacion_complementaria.xlsx';
+	EXEC imp.Importar_Catalogo 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Productos\catalogo.csv', 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx'
 	------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 	/*OBSERVAR INSERCION
 	SELECT * FROM ddbba.Producto
 	*/
 
-
-<<<<<<< HEAD
-
-
-=======
 go
->>>>>>> c917d293e55f04979b72a0a0cd6e9eadd110c714
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- 4. Procedimiento para importar Informacion_complementaria.xlsx 
-IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_Informacion_complementaria') 
+--SUCURSAL
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_Informacion_complementaria_sucursal') 
 BEGIN
-	 DROP PROCEDURE Importar_Informacion_complementaria;
-	 PRINT 'SP Importar_Informacion_complementaria ya existe -- > se borro';
+	 DROP PROCEDURE imp.Importar_Informacion_complementaria_sucursal;
+	 PRINT 'SP Importar_Informacion_complementaria_sucursal ya existe -- > se borro';
 END;
 go
-CREATE PROCEDURE Importar_Informacion_complementaria
+CREATE PROCEDURE imp.Importar_Informacion_complementaria_sucursal
     @RutaArchivo NVARCHAR(255)
 AS
 BEGIN
 
 	DECLARE @SQL NVARCHAR(MAX);
     
-	--1 crear tabla temporal para cargar SUCURSALES--------------------------------------------------
+	--crear tabla temporal para cargar SUCURSALES
 	CREATE TABLE #Temp_sucursal (
-		id INT IDENTITY(1,1),
 		localidad VARCHAR(100),
 		direccion VARCHAR(255),
 		horario VARCHAR(50),
@@ -372,58 +284,62 @@ BEGIN
 
     EXEC sp_executesql @SQL;
 
-	--paso el contenido de #temp como parametros para sp insertarSucursal
+	--reemplazo las ciudades
+	UPDATE #Temp_sucursal
+	SET localidad = CASE
+		WHEN localidad = 'Yangon' THEN 'San Justo'
+		WHEN localidad = 'Naypyitaw' THEN 'Ramos Mejia'
+		WHEN localidad = 'Mandalay' THEN 'Lomas del Mirador'
+		END;
 
-	DECLARE @contador INT = 1, @totalFilas INT;
-	SELECT @totalFilas = COUNT(*) FROM #Temp_sucursal;
-	DECLARE  
-		@localidad VARCHAR(100),
-		@direccion VARCHAR(255),
-		@horario VARCHAR(50),
-		@telefono VARCHAR(20)
-	WHILE @contador <= @totalFilas
-	BEGIN
+	INSERT INTO ddbba.Sucursal (localidad,direccion,horario,telefono)
+	SELECT
+		localidad,
+		direccion,
+		horario,
+		telefono
+	FROM #Temp_sucursal tmps
+	WHERE localidad IS NOT NULL AND direccion IS NOT NULL and NOT EXISTS (SELECT 1 FROM ddbba.Sucursal S WHERE S.localidad=tmps.localidad and S.direccion=tmps.direccion) --fijarse que no haya duplicados
 
-		SELECT 
-				@localidad = localidad,
-				@direccion = direccion,
-				@horario = horario,
-				@telefono = telefono
-		FROM #Temp_sucursal WHERE id = @contador;
-		--reemplazo las ciudades
-		IF @localidad IN ('Yangon')
-			SET @localidad='San Justo';
-		IF @localidad IN ('Naypyitaw')
-			SET @localidad='Ramos Mejia';
-		IF @localidad IN ('Mandalay')
-			SET @localidad='Lomas del Mirador';		
-		
-		EXEC ddbba.insertarSucursal
-			@localidad,
-			@direccion,
-			@horario,
-			@telefono
-
-		SET @contador = @contador + 1;
-	END;
 	DROP TABLE #Temp_sucursal;
+END;
+go
+	
+	--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos------------------------------------------------------------------
+	EXEC imp.Importar_Informacion_complementaria_sucursal 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Informacion_complementaria.xlsx';
+	----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+	/*OBSERVAR INSERCION
+	SELECT * FROM ddbba.Sucursal
+	*/
 
-	--2. crear tabla temporal para cargar EMPLEADOS --------------------------------------------------
-	CREATE TABLE #Temp_empleado (
-		id_emp INT IDENTITY(1,1),
-		id_empleado int,
-		nombre VARCHAR(100),
-		apellido VARCHAR(100),
-		dni INT,
-		direccion VARCHAR(255),		
-		email_personal VARCHAR(255),
-		email_empresarial VARCHAR(255),
-		turno VARCHAR(50),
-		cargo VARCHAR(50),
-		sucursal VARCHAR(100)
-		)
+
+--EMPLEADO
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_Informacion_complementaria_empleado') 
+BEGIN
+	 DROP PROCEDURE imp.Importar_Informacion_complementaria_empleado;
+	 PRINT 'SP Importar_Informacion_complementaria_empleado ya existe -- > se borro';
+END;
+go
+CREATE PROCEDURE imp.Importar_Informacion_complementaria_empleado
+    @RutaArchivo NVARCHAR(255), @Clave NVARCHAR(255)
+AS
+BEGIN
+	--crear tabla temporal para cargar EMPLEADOS 
+		CREATE TABLE #Temp_empleado (
+			id_empleado int,
+			nombre VARCHAR(100),
+			apellido VARCHAR(100),
+			dni INT,
+			direccion VARCHAR(255),		
+			email_personal VARCHAR(255),
+			email_empresarial VARCHAR(255),
+			turno VARCHAR(50),
+			cargo VARCHAR(50),
+			sucursal VARCHAR(100)
+			)
 		
     --ingreso de EMPLEADOS
+	DECLARE @SQL NVARCHAR(MAX);
 	SET @SQL =' 
     INSERT INTO #Temp_empleado (id_empleado,nombre,apellido,dni,direccion,email_personal,email_empresarial,turno,cargo,sucursal)
     SELECT [Legajo/ID],[Nombre],[Apellido],[DNI],[Direccion],[email personal],[email empresa],[Turno],[Cargo],[Sucursal]
@@ -432,86 +348,52 @@ BEGIN
         ''SELECT [Legajo/ID],[Nombre],[Apellido],[DNI],[Direccion],[email personal],[email empresa],[Turno],[Cargo],[Sucursal] FROM [Empleados$]'')';
 
     EXEC sp_executesql @SQL;
-	--paso el contenido de #temp como parametros para sp insertarEmpleado
+	
 
-	SET @contador = 1;
-	SELECT @totalFilas = COUNT(*) FROM #Temp_empleado;
-	DECLARE 
-		@id_empleado int,
-		@nombre VARCHAR(100),
-		@apellido VARCHAR(100),
-		@dni INT,
-		@direccion_emp VARCHAR(255),		
-		@email_personal VARCHAR(255),
-		@email_empresarial VARCHAR(255),
-		@turno VARCHAR(50),
-		@cargo VARCHAR(50),
-		@sucursal VARCHAR(100),
-		@id_sucursal_emp INT,
-		@cuil VARCHAR(15)
+	INSERT INTO ddbba.Empleado (id_empleado,cuil,dni,direccion,apellido,nombre,email_personal, email_empresarial,turno,cargo,id_sucursal)
+	SELECT
+		id_empleado,
+		ENCRYPTBYPASSPHRASE(@Clave,CAST((FLOOR(RAND() * 8) + 20) AS VARCHAR) + '-' + CAST(dni AS VARCHAR) + '-' + CAST((FLOOR(RAND() * 9) + 1) AS VARCHAR)) as Cuil,
+		ENCRYPTBYPASSPHRASE(@Clave,CAST(dni AS VARCHAR)) as DNI,
+		ENCRYPTBYPASSPHRASE(@Clave,direccion) as Direccion,
+		ENCRYPTBYPASSPHRASE(@Clave,apellido) as Apellido,
+		ENCRYPTBYPASSPHRASE(@Clave,nombre) as Nombre,
+		ENCRYPTBYPASSPHRASE(@Clave,email_personal) as Email_personal,
+		ENCRYPTBYPASSPHRASE(@Clave,email_empresarial) as Email_empresarial,
+		turno,
+		cargo,
+		(SELECT id_sucursal FROM ddbba.Sucursal S WHERE tmpe.sucursal=S.localidad)
+	FROM #Temp_empleado tmpe
+	WHERE id_empleado IS NOT NULL and NOT EXISTS (SELECT 1 FROM ddbba.Empleado WHERE id_empleado=tmpe.id_empleado);
 
-	WHILE @contador <= @totalFilas
-	BEGIN
-		SELECT 
-			@id_empleado = id_empleado,
-			@nombre = nombre,
-			@apellido = apellido,
-			@dni = dni,
-			@direccion_emp = direccion,
-			@email_personal = email_personal,
-			@email_empresarial = email_empresarial,
-			@turno = turno,
-			@cargo = cargo,
-			@sucursal = sucursal
-		FROM #Temp_empleado WHERE id_emp = @contador;
-		--crear cuil
-		SET @cuil = CAST((FLOOR(RAND() * 8) + 20) AS VARCHAR) + '-' + CAST(@dni AS VARCHAR) + '-' + CAST((FLOOR(RAND() * 9) + 1) AS VARCHAR);
-		--guardar id de sucursal
-		SELECT @id_sucursal_emp = id_sucursal
-		FROM ddbba.Sucursal
-		WHERE localidad = @sucursal
 
-		EXEC ddbba.insertarEmpleado
-			@id_empleado,
-			@cuil,
-			@dni,
-			@direccion_emp,
-			@apellido,
-			@nombre,
-			@email_personal,
-			@email_empresarial,
-			@turno,
-			@cargo,
-			@id_sucursal_emp
-
-		SET @contador = @contador + 1;
-	END;
 	DROP TABLE #Temp_empleado;
 
 END; --fin SP
 go
 
-<<<<<<< HEAD
---ejecutar el Store procedure
-EXEC Importar_Informacion_complementaria 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx';
-go
-----fijarse
-SELECT * FROM ddbba.Sucursal
-SELECT * FROM ddbba.Empleado
-
-
-	/*EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos------------------------------------------------------------------
-=======
 	--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos------------------------------------------------------------------
->>>>>>> c917d293e55f04979b72a0a0cd6e9eadd110c714
-	EXEC Importar_Informacion_complementaria 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx';
+	EXEC imp.Importar_Informacion_complementaria_empleado 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Informacion_complementaria.xlsx', 'Contrasenia';
+	EXEC imp.Importar_Informacion_complementaria_empleado 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx';
 	----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 	/*OBSERVAR INSERCION
-	SELECT * FROM ddbba.Sucursal
 	SELECT * FROM ddbba.Empleado
 	*/
 
-
+	/*--DESENCRIPTAR Y VER LA TABLA ENTERA
+	SELECT id_empleado, 
+       CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', nombre)) AS Nombre,
+       CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', apellido)) AS Apellido,
+       CONVERT(INT, CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', CAST(dni AS VARCHAR)))) AS DNI,
+       CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', direccion)) AS Direccion,
+       CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', cuil)) AS Cuil,
+       CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', email_personal)) AS Email_personal,
+       CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', email_empresarial)) AS Email_empresarial,
+	   turno,
+	   cargo,
+	   id_sucursal
+	FROM ddbba.Empleado;
+*/
 
 go
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -519,21 +401,21 @@ go
 -- 5. Procedimiento para crear los MEDIOS DE PAGO
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Insertar_MediosDePago') 
 BEGIN
-	 DROP PROCEDURE Insertar_MediosDePago;
+	 DROP PROCEDURE imp.Insertar_MediosDePago;
 	 PRINT 'SP Insertar_MediosDePago ya existe -- > se borro';
 END;
 go
-CREATE PROCEDURE Insertar_MediosDePago
+CREATE PROCEDURE imp.Insertar_MediosDePago
 AS
 BEGIN
-	EXEC ddbba.insertarMedioPago 'Credit card';
-	EXEC ddbba.insertarMedioPago 'Cash';
-	EXEC ddbba.insertarMedioPago 'Ewallet';
+	EXEC Procedimientos.insertarMedioPago 'Credit card';
+	EXEC Procedimientos.insertarMedioPago 'Cash';
+	EXEC Procedimientos.insertarMedioPago 'Ewallet';
 END;
 go
 
 	--EJECUTAR EL STORE PROCEDURE
-	EXEC Insertar_MediosDePago;
+	EXEC imp.Insertar_MediosDePago;
 	----------------------------*/
 	/*OBSERVAR INSERCION
 	SELECT * FROM ddbba.MedioPago
@@ -546,20 +428,20 @@ go
 -- 6.Procedimiento para importar Ventas_registradas.csv
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_Ventas_registradas') 
 BEGIN
-	 DROP PROCEDURE Importar_Ventas_registradas;
+	 DROP PROCEDURE imp.Importar_Ventas_registradas;
 	 PRINT 'SP Importar_Ventas_registradas ya existe -- > se borro';
 END;
 go
-CREATE PROCEDURE Importar_Ventas_registradas
+CREATE PROCEDURE imp.Importar_Ventas_registradas
     @RutaArchivo NVARCHAR(255)
 AS
 BEGIN 
 	DECLARE @SQL NVARCHAR(MAX);
 
     --crear tabla temporal para cargar los datos de la venta
-	CREATE TABLE #TempImport (
-				id_factura VARCHAR(15),
-				tipo_factura CHAR(2),
+	CREATE TABLE #Temp (
+				id_factura CHAR(12),
+				tipo_factura CHAR(1),
 				localidad VARCHAR(100),
 				tipo VARCHAR(50), --tipo de cliente
 				genero VARCHAR(10),
@@ -570,11 +452,11 @@ BEGIN
 				hora TIME,
 				tipo_mp VARCHAR(50), --tipo
 				id_empleado INT,
-				iden_pago VARCHAR(50)
+				iden_pago VARCHAR(50),
 			)
 	
 		SET @SQL = ' 
-		BULK INSERT #TempImport
+		BULK INSERT #Temp
 		FROM ''' + @RutaArchivo + '''
 		WITH (
 			FIRSTROW = 2,
@@ -585,204 +467,87 @@ BEGIN
 		);';
 		    EXEC sp_executesql @SQL;
 
-		--creo la tabla para que tenga el id identity
-		CREATE TABLE #Temp (
-		id INT IDENTITY(1,1),
-		id_factura VARCHAR(15),
-		tipo_factura CHAR(2),
-		localidad VARCHAR(100),
-		tipo VARCHAR(50), 
-		genero VARCHAR(10),
-		nombre_producto NVARCHAR(100),
-		precio_unitario DECIMAL(10, 2),
-		cantidad INT,
-		fecha DATE,
-		hora TIME,
-		tipo_mp VARCHAR(50),
-		id_empleado INT,
-		iden_pago VARCHAR(50)
-	);
-	INSERT INTO #Temp (
-		id_factura, tipo_factura, localidad, tipo, genero, nombre_producto, 
-		precio_unitario, cantidad, fecha, hora, tipo_mp, id_empleado, iden_pago
-	)
-	SELECT * FROM #TempImport;
 
-	--paso el contenido de #temp como parametros para sp insertarproducto
-	DECLARE @contador INT = 1, @totalFilas INT;
-	SELECT @totalFilas = COUNT(*) FROM #Temp;
+		--cargar datos a CLIENTE
+		--generacion  de nombres aleatorios para cliente
+		DECLARE @nombres TABLE (nombre VARCHAR(50));
+		DECLARE @apellidos TABLE (apellido VARCHAR(50));
+		DECLARE @nombre VARCHAR(50), @apellido VARCHAR(50)
+		 -- Insertamos algunos nombres y apellidos en las tablas temporales
+		INSERT INTO @nombres VALUES ('Juan'), ('María'), ('Carlos'), ('Ana'), ('Pedro'), ('Laura'), ('Luis'), ('Sofía');
+		INSERT INTO @apellidos VALUES ('Gomez'), ('Perez'), ('Lopez'), ('Fernandez'), ('Martinez'), ('Rodriguez'), ('Sanchez'), ('Diaz');
 
-	--generacion  de nombres aleatorios para cliente
-	DECLARE @nombres TABLE (nombre VARCHAR(50));
-	DECLARE @apellidos TABLE (apellido VARCHAR(50));
-	DECLARE @nombre VARCHAR(50), @apellido VARCHAR(50)
-	 -- Insertamos algunos nombres y apellidos en las tablas temporales
-	INSERT INTO @nombres VALUES ('Juan'), ('María'), ('Carlos'), ('Ana'), ('Pedro'), ('Laura'), ('Luis'), ('Sofía');
-	 INSERT INTO @apellidos VALUES ('Gomez'), ('Perez'), ('Lopez'), ('Fernandez'), ('Martinez'), ('Rodriguez'), ('Sanchez'), ('Diaz');
+		--modificacmos la tabla para ingresar nuevos datos
+		ALTER TABLE #Temp
+		ADD nombre VARCHAR(50),
+		 apellido varchar(50),
+		 tipo_cliente varchar(10),
+		 fnac DATE;
 
-	WHILE @contador <= @totalFilas --while
-	BEGIN
-		DECLARE
-				@id INT,
-				@id_factura VARCHAR(15),
-				@tipo_factura CHAR(1),
-				@localidad VARCHAR(100),
-				@tipo VARCHAR(50), --tipo de cliente
-				@genero VARCHAR(10),
-				@nombre_producto  VARCHAR(100),
-				@precio_unitario DECIMAL(10, 2),
-				@cantidad INT,
-				@fecha DATE,
-				@hora TIME,
-				@tipo_mp VARCHAR(50), --tipo
-				@id_empleado INT,
-				@iden_pago VARCHAR(30)
-		SELECT
-				@id = id, --UN ID POR CADA PEDIDO REALIZADO
-				@id_factura = id_factura,
-				@tipo_factura = tipo_factura,
-				@localidad = localidad,
-				@tipo = tipo, --tipo de cliente
-				@genero = genero,
-				@nombre_producto = nombre_producto,
-				@precio_unitario = precio_unitario,
-				@cantidad = cantidad,
-				@fecha = fecha,
-				@hora = hora,
-				@tipo_mp = tipo_mp, --tipo
-				@id_empleado = id_empleado,
-				@iden_pago = iden_pago
-		FROM #Temp WHERE id = @contador;
-
-		--insertar los datos en la tabla correspondiente CLIENTE
-		--creamos tipos de clientes alatorios ya que no sabemos de que tipo son
-		DECLARE @tipo_cliente VARCHAR(10)
-		IF (RAND() < 0.5)
-		BEGIN
-		 SET @tipo_cliente = 'Member' ;
-		END;
-		ELSE 
-		BEGIN
-			SET @tipo_cliente = 'Normal' ;
-		END;
+		UPDATE #Temp
+		SET 
+			nombre = (SELECT TOP 1 nombre FROM @nombres ORDER BY NEWID()),
+			apellido = (SELECT TOP 1 apellido FROM @apellidos ORDER BY NEWID()),
+			fnac = DATEADD(DAY, -ABS(CHECKSUM(NEWID()) % 18250), GETDATE()) -- 50 años aleatorios
 		
-		 --guardamos los datos del clientes
-		 SELECT TOP 1 @nombre = nombre FROM @nombres ORDER BY NEWID();
-		 SELECT TOP 1 @apellido = apellido  FROM @apellidos ORDER BY NEWID();
-		 
-		 --creamos fechas de nacimiento alateorias
-		 DECLARE @fnac DATETIME;
-		SET @fnac = DATEADD(DAY, -ABS(CHECKSUM(NEWID()) % 18250), GETDATE()); --18250 son los ultimos 50 anios
+		
+		
+		--insertamos los datos en CLIENTE
+		INSERT INTO ddbba.Cliente (genero,tipo,apellido,nombre,fecha_nac)
+		SELECT
+			genero,
+			tipo,
+			apellido,
+			nombre,
+			fnac
+		FROM #Temp
+		---------------------------------------------------------------------
+		--cargar datos a PEDIDO
+		ALTER TABLE #Temp
+		ADD estado VARCHAR(10);
+		UPDATE #Temp
+		SET estado = CASE WHEN CAST(NEWID() AS BINARY(1)) % 2 = 0 THEN 'Pagado' ELSE 'NoPagado' END;
 
-		EXEC ddbba.insertarCliente
-			@id, --id cliente
-			@genero,
-			@tipo_cliente,
-			@apellido,
-			@nombre,
-			@fnac
 
-		--insertar los datos en la tabla correspondiente PEDIDO
-		--pasar de tipo de mp a su id
-		IF @tipo_mp IN ('Credit card')
-			SET @tipo_mp = 'Tarjeta de credito';
-		IF @tipo_mp IN ('Cash')
-			SET @tipo_mp = 'Efectivo';
-		IF @tipo_mp IN ('Ewallet')
-			SET @tipo_mp = 'Billetera Electronica';
+	INSERT INTO ddbba.Pedido (id_factura, fecha_pedido, hora_pedido, id_cliente, id_mp, iden_pago,id_empleado,id_sucursal,tipo_factura, estado_factura)
+	SELECT 
+		id_factura,
+		fecha,
+		hora,
+		(SELECT id_cliente FROM ddbba.Cliente),
+		(SELECT id_mp FROM ddbba.MedioPago MP WHERE tipo_mp=MP.tipo),
+		iden_pago,
+		id_empleado,
+		(SELECT id_sucursal FROM ddbba.Sucursal S WHERE S.localidad=localidad),
+		tipo_factura,
+		estado
+	FROM #Temp ;
 
-		DECLARE @id_mp int
-		SELECT @id_mp = M.id_mp
-		FROM ddbba.MedioPago M
-		WHERE @tipo_mp = M.tipo
+	-------------------------------------------------------------
 
-		EXEC ddbba.insertarPedido
-			@fecha,
-			@hora,
-			@id, --id_cliente
-			@id_mp, 
-			@iden_pago
-
-		--insertar los datos en la tabla correspondiente VENTA	
-		DECLARE @id_sucursal INT
-		--reemplazo las ciudades
-		IF @localidad IN ('Yangon')
-			SET @localidad='San Justo';
-		IF @localidad IN ('Naypyitaw')
-			SET @localidad='Ramos Mejia';
-		IF @localidad IN ('Mandalay')
-			SET @localidad='Lomas del Mirador';			
-
-		SELECT @id_sucursal = id_sucursal
-		FROM ddbba.Sucursal
-		WHERE @localidad = localidad;
-
-		EXEC ddbba.insertarVenta
-			@id, --id pedido
-			@id_sucursal,
-			@id_empleado --id empleado
-
-		--insertar los datos en la tabla correspondiente TIENE	
-		DECLARE @id_producto INT
-		SELECT @id_producto = id_producto
-		FROM ddbba.Producto Pro
-		WHERE @nombre_producto = Pro.nombre_producto
-
-		EXEC ddbba.insertarTiene
-			@id, --id pedido
-			@id_producto,
-			@cantidad
-		--generar estados para la factura
-		DECLARE @estado Varchar(10);
-		IF RAND() < 0.5 
-			SET @estado = 'Pagado' 
-		ELSE 
-			SET @estado = 'NoPagado'
-		--insertar los datos en la tabla correspondiente FACTURA	
-		EXEC ddbba.insertarFactura
-			@id_factura,
-			@tipo_factura,
-			@id, --id pedido
-			@fecha,
-			@estado
-
-		SET @contador = @contador + 1;
-	END;
+		--insertar los datos en la tabla correspondiente PRODUCTOSOLICITADO	
+		INSERT INTO ddbba.ProductoSolicitado (id_factura, id_producto, cantidad)
+		SELECT
+			id_factura,
+			(SELECT id_producto FROM ddbba.Producto P WHERE P.nombre_producto=tmp.nombre_producto),
+			cantidad
+		FROM #Temp tmp;
 
 	DROP TABLE #Temp;
 
 END;
 go
-<<<<<<< HEAD
-
---ejecutar el Store procedure
-
-EXEC Importar_Ventas_registradas 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Ventas_registradas.csv'
-
---fijarse
-SELECT * FROM ddbba.Pedido
-SELECT  * FROM ddbba.Cliente
-SELECT * FROM ddbba.Venta
-SELECT * FROM ddbba.Tiene
-SELECT * FROM ddbba.Factura
-SELECT * FROM ddbba.Empleado
-SELECT * FROM ddbba.Producto
 
 
 
-	/*EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos------------------------------------------------------------------
-	EXEC Importar_Ventas_registradas 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Ventas_registradas.csv'
-=======
 	--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos------------------------------------------------------------------
-	EXEC Importar_Ventas_registradas 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Ventas_registradas.csv';
->>>>>>> c917d293e55f04979b72a0a0cd6e9eadd110c714
+	EXEC imp.Importar_Ventas_registradas 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Ventas_registradas.csv';
 	-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 	/*OBSERVAR INSERCION
 	SELECT * FROM ddbba.Pedido
 	SELECT  * FROM ddbba.Cliente
-	SELECT * FROM ddbba.Venta
-	SELECT * FROM ddbba.Tiene
-	SELECT * FROM ddbba.Factura
+	SELECT * FROM ddbba.ProductoSolicitado
+
 	*/
 
 go
