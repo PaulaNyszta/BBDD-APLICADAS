@@ -98,7 +98,7 @@ go
 --TABLA PROVEEDOR_PROVEE
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Proveedor_provee') AND type = N'U')
 	BEGIN 
-		CREATE TABLE ddbba.Proveedor_provee(
+		CREATE TABLE ddbba.ProveedorProvee(
 			id_proveedor INT,
 			id_producto INT,
 			CONSTRAINT PKProvee PRIMARY KEY (id_proveedor, id_producto),
@@ -485,10 +485,10 @@ go
 --SP PARA PROVEEDOR_PROVEE
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarProveedor_provee')
 BEGIN
-	DROP PROCEDURE Procedimientos.insertarProveedor_provee;
+	DROP PROCEDURE Procedimientos.insertarProveedorProvee;
 END;
 go
-CREATE PROCEDURE Procedimientos.insertarProveedor_provee(
+CREATE PROCEDURE Procedimientos.insertarProveedorProvee(
 	@id_proveedor INT,
 	@id_producto INT)
 AS
@@ -506,7 +506,7 @@ BEGIN
 		RETURN;
 	END;
 	--verificar que ya se haya agregado el proveedor con su producto
-	IF EXISTS (SELECT 1 FROM ddbba.Proveedor_provee WHERE id_producto = @id_producto and id_proveedor=@id_proveedor)
+	IF EXISTS (SELECT 1 FROM ddbba.ProveedorProvee WHERE id_producto = @id_producto and id_proveedor=@id_proveedor)
 	BEGIN	
 		PRINT 'ya existe ese proveedor con el producto';
 		RETURN;
@@ -707,10 +707,10 @@ go
 --SP PARA Producto_Solicitado
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarProducto_Solicitado')
 BEGIN
-	DROP PROCEDURE Procedimientos.insertarProducto_Solicitado;
+	DROP PROCEDURE Procedimientos.insertarProductoSolicitado;
 END;
 go
-CREATE PROCEDURE Procedimientos.insertarProducto_Solicitado
+CREATE PROCEDURE Procedimientos.insertarProductoSolicitado
 	@id_factura CHAR(12),
 	@id_producto INT,
 	@cantidad INT

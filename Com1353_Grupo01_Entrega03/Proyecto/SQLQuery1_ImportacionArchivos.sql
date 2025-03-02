@@ -4,6 +4,7 @@
 Use Com1353G01
 -----------------------------------------------------------------------------------------------------------------------
 -- 1. Procedimiento Almacenado para importar Electronic accessories.xlsx
+
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_ElectronicAccessories') 
 BEGIN
     DROP PROCEDURE Importar_ElectronicAccessories;
@@ -21,7 +22,17 @@ BEGIN
     CREATE TABLE #Temp (
         nombre_producto VARCHAR(100),
         precio_unitario DECIMAL(10,2),
-        moneda VARCHAR(7)
+        moneda VARCHAR(7),
+        fecha DATETIME DEFAULT GETDATE()
+    );
+
+    -- Crear tabla de errores
+    CREATE TABLE #Errores (
+        nombre_producto VARCHAR(100),
+        precio_unitario DECIMAL(10,2),
+        moneda VARCHAR(7),
+        fecha DATETIME,
+        error_mensaje VARCHAR(255)
     );
 
     -- Importar datos desde Excel a #Temp
@@ -32,29 +43,64 @@ BEGIN
     FROM OPENROWSET(''Microsoft.ACE.OLEDB.12.0'',
         ''Excel 12.0;Database=' + @RutaArchivo + ';HDR=YES'',
         ''SELECT [Product], [Precio Unitario en dolares] FROM [Sheet1$]'')';
-    
-    EXEC sp_executesql @SQL; -- Consulta dinámica para importar datos
 
-    -- Insertar todos los productos en la tabla de productos sin bucles
+    EXEC sp_executesql @SQL;
+
+    -- Insertar productos con errores en #Errores
+    INSERT INTO #Errores (nombre_producto, precio_unitario, moneda, fecha, error_mensaje)
+    SELECT 
+        nombre_producto, 
+        precio_unitario, 
+        moneda, 
+        fecha,
+        CASE 
+            WHEN EXISTS (SELECT 1 FROM ddbba.Producto p WHERE p.nombre_producto = t.nombre_producto) 
+                THEN 'El producto ya existe en la tabla.'
+            WHEN precio_unitario <= 0 
+                THEN 'El precio del producto debe ser mayor a cero.'
+            WHEN moneda NOT IN ('USD', 'EUR', 'ARS') 
+                THEN 'La moneda debe ser USD, EUR o ARS.'
+            WHEN fecha > GETDATE() 
+                THEN 'La fecha del producto no debe ser futura.'
+            ELSE NULL
+        END AS error_mensaje
+    FROM #Temp t
+    WHERE 
+        EXISTS (SELECT 1 FROM ddbba.Producto p WHERE p.nombre_producto = t.nombre_producto)
+        OR precio_unitario <= 0
+        OR moneda NOT IN ('USD', 'EUR', 'ARS')
+        OR fecha > GETDATE();
+
+    -- Insertar productos válidos en ddbba.Producto
     INSERT INTO ddbba.Producto (nombre_producto, precio_unitario, linea, precio_referencia, unidad, cantidadPorunidad, moneda, fecha)
     SELECT 
         nombre_producto, 
         precio_unitario, 
-        'Electrodomestico', -- línea de producto por defecto
-        0,  -- precio de referencia por defecto
-        '', -- unidad
-        '', -- cantidad por unidad
+        'Electrodomestico', 
+        0,  
+        '', 
+        '', 
         moneda, 
-        ''  -- fecha 
-    FROM #Temp;
+        fecha
+    FROM #Temp
+    WHERE nombre_producto NOT IN (SELECT nombre_producto FROM #Errores);
 
-    -- Eliminar la tabla temporal
+    -- Mostrar errores
+    IF EXISTS (SELECT 1 FROM #Errores)
+    BEGIN
+        PRINT 'Algunos productos no se pudieron insertar. Ver detalles:';
+        SELECT * FROM #Errores;
+    END
+    ELSE
+    BEGIN
+        PRINT 'Importación completada correctamente.';
+    END;
+
+    -- Eliminar tablas temporales
     DROP TABLE #Temp;
-
-    PRINT 'Importación completada correctamente.';
+    DROP TABLE #Errores;
 END;
 GO
-
 
 	--FIJARSE
 	SELECT * FROM ddbba.Producto
@@ -71,10 +117,9 @@ GO
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_Productos_importados') 
 BEGIN
     DROP PROCEDURE Importar_Productos_importados;
-    PRINT 'SP Importar_Productos_importados ya existe --> se borró';
+    PRINT 'SP Importar_ElectronicAccessories ya existe --> se borró';
 END;
 GO
-
 CREATE PROCEDURE Importar_Productos_importados
     @RutaArchivo NVARCHAR(255)
 AS
@@ -89,6 +134,12 @@ BEGIN
         linea VARCHAR(100),
         cantidadPorUnidad NVARCHAR(50),
         proveedor NVARCHAR(255)
+    );
+
+    -- Crear tabla temporal para almacenar los productos insertados
+    CREATE TABLE #ProductosInsertados (
+        id_producto INT,
+        nombre_producto NVARCHAR(255)
     );
 
     -- Importar datos desde Excel a #Temp
@@ -125,7 +176,7 @@ BEGIN
     FROM #Temp;
 
     -- Insertar relaciones en Provee
-    INSERT INTO ddbba.Provee (id_proveedor, id_producto)
+    INSERT INTO ddbba.ProveedorProvee (id_proveedor, id_producto)
     SELECT p.id_proveedor, pi.id_producto
     FROM #ProductosInsertados pi
     JOIN ddbba.Proveedor p ON pi.nombre_producto = p.nombre;
@@ -138,15 +189,17 @@ BEGIN
 END;
 GO
 
+
 --ejecutar el Store procedure
-EXEC Importar_Productos_importados 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Productos\Productos\Productos_importados.xlsx';
+EXEC Importar_Productos_importados 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Productos\Productos_importados.xlsx';
 go
+
 
 
 ----fijarse
 SELECT * FROM ddbba.Producto
 select * from ddbba.Proveedor
-select * from ddbba.Provee
+
 ----borrar el SP
 --DROP PROCEDURE Importar_Productos_importados
 
@@ -760,11 +813,11 @@ CREATE PROCEDURE Borrar
 AS
 BEGIN
 	DROP TABLE ddbba.NotaCredito 
-	DROP TABLE ddbba.Productos_Solicitados
+	DROP TABLE ddbba.ProductoSolicitado
 	DROP TABLE ddbba.Pedido
 	DROP TABLE ddbba.MedioPago
 	DROP TABLE ddbba.Cliente
-	DROP TABLE ddbba.Proveedor_provee
+	DROP TABLE ddbba.ProveedorProvee
 	DROP TABLE ddbba.Producto
 	DROP TABLE ddbba.Proveedor
 	DROP TABLE ddbba.Empleado
