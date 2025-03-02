@@ -193,9 +193,9 @@ ELSE
 go
 
 
+
 ---------------------------------------------SP--------------------------------------------------------------------
 --creacion de los Store Procedure que validan la insercion de los datos a las tablas anteriores
->>>>>>> c917d293e55f04979b72a0a0cd6e9eadd110c714
 -- SP PARA CLIENTE
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarCliente')
 BEGIN
