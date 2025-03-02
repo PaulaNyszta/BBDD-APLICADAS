@@ -18,7 +18,7 @@ IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'ddbba')
 	END;
 go
 
---Creacion e las tablas 
+--Creacion de las tablas 
 --TABLA SUCURSAL
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Sucursal') AND type = N'U') -- 'U' tabla creada por el usuario 'N' es q sea unicode
 	BEGIN
@@ -172,10 +172,10 @@ ELSE
 	END;
 go
 
---TABLA Productos_Solicitados
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Productos_Solicitados') AND type = N'U')
+--TABLA Producto_Solicitado
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.ProductoSolicitado') AND type = N'U')
 	BEGIN
-		CREATE TABLE ddbba.Productos_Solicitados (
+		CREATE TABLE ddbba.ProductoSolicitado (
 			id_factura char(12),
 			id_producto INT ,
 			cantidad INT,
@@ -183,14 +183,13 @@ IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G0
 			CONSTRAINT FKTiene1 FOREIGN KEY (id_producto) REFERENCES ddbba.Producto(id_producto),
 			CONSTRAINT FKTiene2 FOREIGN KEY (id_factura) REFERENCES ddbba.Pedido(id_factura)
 		);
-		PRINT 'Tabla Productos_Solicitados creada correctamente.';
+		PRINT 'Tabla ProductoSolicitado creada correctamente.';
 	END
 ELSE
 	BEGIN
-		PRINT 'La tabla Productos_Solicitados ya existe.';
+		PRINT 'La tabla ProductoSolicitado ya existe.';
 	END;
 go
-
 -- TABLA NOTA CREDITO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'ddbba.NotaCredito') AND type = N'U')
 BEGIN
@@ -705,13 +704,13 @@ BEGIN
 END;
 go
 
---SP PARA Productos_Solicitados
-IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarProductos_Solicitados')
+--SP PARA Producto_Solicitado
+IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarProducto_Solicitado')
 BEGIN
-	DROP PROCEDURE Procedimientos.insertarProductos_Solicitados;
+	DROP PROCEDURE Procedimientos.insertarProducto_Solicitado;
 END;
 go
-CREATE PROCEDURE Procedimientos.insertarProductos_Solicitados
+CREATE PROCEDURE Procedimientos.insertarProducto_Solicitado
 	@id_factura CHAR(12),
 	@id_producto INT,
 	@cantidad INT
@@ -719,7 +718,7 @@ AS
 
 BEGIN
 	--verificar que no se inserten datos iguales
-	if  EXISTS (SELECT 1 FROM ddbba.Productos_Solicitados WHERE id_producto = @id_producto and @id_factura=id_factura )
+	if  EXISTS (SELECT 1 FROM ddbba.ProductoSolicitado WHERE id_producto = @id_producto and @id_factura=id_factura )
 	BEGIN
 		PRINT 'El pedido ya tiene esos datos'
 		RETURN;
@@ -743,8 +742,9 @@ BEGIN
 		RETURN;
 	END;
 
-	INSERT INTO ddbba.Productos_Solicitados(id_producto, id_factura, cantidad)
+	INSERT INTO ddbba.ProductoSolicitado(id_producto, id_factura, cantidad)
     VALUES (@id_producto, @id_factura, @cantidad);
 	PRINT 'Valores insertados correctamente'
 END;
 go
+

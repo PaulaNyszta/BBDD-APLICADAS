@@ -4,133 +4,99 @@ USE Com1353G01
 --debajo de cada consigna de seguridad se detalla su forma de ejecucion
 
 --Crear notas de Credito para devoluciones de Clientes------------------------------------------------------------------
-IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'GenerarNotaCredito')
-BEGIN
-	PRINT 'ya existia el Store procedure GenerarNotaCredito';
-END
-ELSE
-BEGIN
-	EXEC('
-	CREATE PROCEDURE GenerarNotaCredito
-		@NC_id_factura VARCHAR(15),
-		@NC_id_empleado INT
+CREATE PROCEDURE Procedimientos.GenerarNotaCredito
+	@id_factura CHAR(12),
+	@id_empleado INT
 
-	AS
-	BEGIN
-			--verificar que existe el id_factura
-			IF NOT EXISTS (SELECT 1 FROM ddbba.Factura WHERE @NC_id_factura=id_factura)
-			BEGIN
-				PRINT ''NO EXISTE LA FACTURA INGRESADA'';
-				RETURN;
-			END;
-			--verificar que existe el id_empleado
-			IF NOT EXISTS (SELECT 1 FROM ddbba.empleado WHERE @NC_id_empleado=id_empleado)
-			BEGIN
-				PRINT ''NO EXISTE EL EMPLEADO INGRESADO'';
-				RETURN;
-			END;
-
-				--creamos la tabla Nota Credito
-				IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N''Com1353G01.ddbba.NotaCredito'') AND type = N''U'') 
-					BEGIN
-						CREATE TABLE ddbba.NotaCredito (
-							id_nota_credito INT IDENTITY(1,1)PRIMARY KEY,
-							fecha_emision DATETIME ,
-							id_cliente INT NOT NULL,
-							id_factura VARCHAR(15),
-							id_pedido INT NOT NULL,
-							nombre_producto VARCHAR(100),
-							precio_unitario DECIMAL(10,2),
-							cantidad INT,
-							monto DECIMAL (10,2),
-							CONSTRAINT FKNotaCredito2 FOREIGN KEY (id_factura,id_pedido) REFERENCES ddbba.Factura(id_factura,id_pedido),
-							CONSTRAINT FKNotaCredito3 FOREIGN KEY (id_cliente) REFERENCES ddbba.Cliente(id_cliente)
-					);
-						PRINT ''Tabla NotaCredito creada correctamente.'';
-					END
-				ELSE
-					BEGIN
-						PRINT ''La tabla notaCredito  ya existe.'';
-					END;
+AS
+BEGIN
+		--verificar que existe el id_factura
+		IF NOT EXISTS (SELECT 1 FROM ddbba.Pedido WHERE @id_factura=id_factura)
+		BEGIN
+			PRINT 'NO EXISTE LA FACTURA INGRESADA';
+			RETURN;
+		END;
+		--verificar que existe el id_empleado
+		IF NOT EXISTS (SELECT 1 FROM ddbba.Empleado WHERE @id_empleado=id_empleado)
+		BEGIN
+			PRINT 'NO EXISTE EL EMPLEADO INGRESADO';
+			RETURN;
+		END;
+	
 			
-		DECLARE @estado_factura VARCHAR(10);
-		DECLARE @cargo VARCHAR(50);
+	DECLARE @estado_factura VARCHAR(10);
+	DECLARE @cargo VARCHAR(50);
 
-		-- Verificar si la factura está pagada
-		SELECT @Estado_factura = estado 
-		FROM ddbba.Factura 
-		WHERE id_factura = @NC_id_factura;
+	-- Verificar si la factura está pagada
+	SELECT @estado_factura = estado_factura
+	FROM ddbba.Pedido
+	WHERE id_factura = @id_factura;
 
-		IF @estado_factura <> ''Pagado'' 
-		BEGIN
-			RAISERROR (''Error: La nota de crédito solo puede generarse para facturas pagadas.'',16,1);
-			RETURN;
-		END;
+	IF @estado_factura <> 'Pagado' 
+	BEGIN
+		PRINT 'Error: La nota de crédito solo puede generarse para facturas pagadas.';
+		RETURN;
+	END;
 
-		-- Verificar si el empleado es un Supervisor
-		SELECT @cargo = cargo 
-		FROM ddbba.Empleado
-		WHERE id_empleado = @NC_id_empleado;
+	-- Verificar si el empleado es un Supervisor
+	SELECT @cargo = cargo 
+	FROM ddbba.Empleado
+	WHERE id_empleado = @id_empleado;
 
-		IF @cargo <> ''Supervisor'' 
-		BEGIN
-			RAISERROR (''Error: Solo los supervisores pueden generar notas de crédito.'',16,1);
-			RETURN;
-		END;
-		--buscar numero de pedido correspondiente a la factura ingresada
-		DECLARE @id_pedido INT;
-		SELECT @id_pedido=id_pedido
-		FROM ddbba.Factura F
-		WHERE @NC_id_factura = F.Id_factura
+	IF @cargo <> 'Supervisor'
+	BEGIN
+		PRINT 'Error: Solo los supervisores pueden generar notas de crédito.';
+		RETURN;
+	END;
 
 		--generar fecha actual
 		DECLARE @fecha_emision DATETIME;
 		SET @fecha_emision = GETDATE();
-		--buscar detalles del pedido:
-			--nombre del producto
-			DECLARE @nombre_producto VARCHAR(100);
-			SELECT  @nombre_producto=nombre_producto
-			FROM ddbba.Producto P
-			INNER JOIN ddbba.Tiene T ON P.id_producto=T.id_producto
-			WHERE @id_pedido=T.id_pedido
 
-			--precio del producto
-			DECLARE @precio_unitario DECIMAL(10,2);
-			SELECT  @precio_unitario=precio_unitario
-			FROM ddbba.Producto P
-			INNER JOIN ddbba.Tiene T ON P.id_producto=T.id_producto
-			WHERE @id_pedido=T.id_pedido;
+		--busco id_cliente
+		DECLARE @id_cliente INT;
+		SELECT @id_cliente=id_cliente FROM ddbba.Pedido Ped WHERE Ped.id_factura=@id_factura;
 
-			--cantidad
-			DECLARE @cantidad INT;
-			SELECT  @cantidad=cantidad
-			FROM ddbba.Tiene T
-			WHERE @id_pedido=T.id_pedido;
+		--nombre del producto
+		DECLARE @nombre_producto VARCHAR(100);
+		SELECT  @nombre_producto=nombre_producto
+		FROM ddbba.Producto P
+		INNER JOIN ddbba.ProductoSolicitado PS ON P.id_producto=PS.id_producto
+		WHERE @id_factura=PS.id_factura;
 
-			--monto
-			DECLARE @monto DECIMAL(10,2);
-			SET  @monto = (@cantidad*@precio_unitario);
+		--precio del producto
+		DECLARE @precio_unitario DECIMAL(10,2);
+		SELECT  @precio_unitario=precio_unitario
+		FROM ddbba.Producto P
+		INNER JOIN ddbba.ProductoSolicitado PS ON P.id_producto=PS.id_producto
+		WHERE @id_factura=PS.id_factura;
 
-			--id_cliente
-			DECLARE @id_cliente INT;
-			SELECT @id_cliente=id_cliente 
-			FROM ddbba.Pedido P
-			WHERE @id_pedido=P.id_pedido;
+		--cantidad
+		DECLARE @cantidad INT;
+		SELECT  @cantidad=cantidad
+		FROM ddbba.ProductoSolicitado PS
+		WHERE @id_factura=PS.id_factura;
 
-		-- Insertar la nota de crédito
-		INSERT INTO ddbba.NotaCredito (fecha_emision,id_cliente, id_factura, id_pedido, nombre_producto,precio_unitario,cantidad,monto)
-		VALUES (@fecha_emision,@id_cliente,@NC_id_factura,@id_pedido,@nombre_producto,@precio_unitario,@cantidad,@monto);
+		--monto
+		DECLARE @monto DECIMAL(10,2);
+		SET  @monto = (@cantidad*@precio_unitario);
+
+	-- Insertar la nota de crédito
+	INSERT INTO ddbba.NotaCredito (fecha_emision,id_cliente, id_factura, nombre_producto,precio_unitario,cantidad,monto)
+	VALUES (@fecha_emision,
+			@id_cliente,
+			@id_factura,
+			@nombre_producto,
+			@precio_unitario,
+			@cantidad,
+			@monto);
     
-		PRINT ''Nota de crédito generada exitosamente.'';
-	END;
-
-')
-PRINT 'SP creado exitosamente';
+	PRINT 'Nota de crédito generada exitosamente.';
 END;
 go
 
 	/*--------EJECUTAR-------------------------------
-	EXEC GenerarNotaCredito '102-06-2002', 257026 	([id_factura],[id_empleado])
+	EXEC Procedimientos.GenerarNotaCredito '102-06-2002', 257026 	([id_factura],[id_empleado])
 	------------------------------------------------*/
 	/*--VISUALIZAR-----------------
 	SELECT * FROM ddbba.NotaCredito
@@ -199,17 +165,12 @@ END;
 
 GO
 
-<<<<<<< HEAD
-
-
 DROP TRIGGER IF EXISTS trg_Empleado_Encrypt ;
-=======
 /*--INSERCION DE DATOS-----------------------------
 INSERT INTO ddbba.Empleado (id_empleado, nombre, apellido, dni, direccion, cuil, email_personal, email_empresarial, turno, cargo, id_sucursal)
 VALUES (500, 'Carlos', 'Gómez', 32456789, 'Av. Siempre Viva 123, Buenos Aires', '20-32456789-3', 'carlos.gomez@email.com', 'cgomez@empresa.com', 'Mañana', 'Analista de Datos', 3),
 (501, 'Mariana', 'López', 29876543, 'Calle Falsa 456, Córdoba', '27-29876543-5', 'mariana.lopez@email.com', 'mlopez@empresa.com', 'Tarde', 'Desarrolladora', 2);
 */
->>>>>>> c917d293e55f04979b72a0a0cd6e9eadd110c714
 
 
 	/*-------VER LA TABLA ENCRIPTADA-----
