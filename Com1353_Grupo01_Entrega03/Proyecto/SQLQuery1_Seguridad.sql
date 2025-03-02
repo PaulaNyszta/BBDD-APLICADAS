@@ -4,6 +4,12 @@ USE Com1353G01
 --debajo de cada consigna de seguridad se detalla su forma de ejecucion
 
 --Crear notas de Credito para devoluciones de Clientes------------------------------------------------------------------
+--SP PARA GENERAR NOTA CREDITO
+IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'GenerarNotaCredito')
+BEGIN
+	DROP PROCEDURE Procedimientos.GenerarNotaCredito;
+END;
+go
 CREATE PROCEDURE Procedimientos.GenerarNotaCredito
 	@id_factura CHAR(12),
 	@id_empleado INT
@@ -82,14 +88,7 @@ BEGIN
 		SET  @monto = (@cantidad*@precio_unitario);
 
 	-- Insertar la nota de crédito
-	INSERT INTO ddbba.NotaCredito (fecha_emision,id_cliente, id_factura, nombre_producto,precio_unitario,cantidad,monto)
-	VALUES (@fecha_emision,
-			@id_cliente,
-			@id_factura,
-			@nombre_producto,
-			@precio_unitario,
-			@cantidad,
-			@monto);
+	 EXEC Procedimientos.insertarNotaCredito @fecha_emision,@id_cliente,@id_factura,@nombre_producto,@precio_unitario,@cantidad,@monto;
     
 	PRINT 'Nota de crédito generada exitosamente.';
 END;
