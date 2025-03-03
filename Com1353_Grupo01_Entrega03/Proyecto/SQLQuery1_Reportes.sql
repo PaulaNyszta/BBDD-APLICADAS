@@ -285,7 +285,6 @@ BEGIN
 	 PRINT 'SP ObtenerMenoresProductosDelMesXML ya existe --> se creará nuevamente';
 END;
 GO
-
 CREATE PROCEDURE Rep.ObtenerMenoresProductosDelMesXML
     @Mes INT,
     @Anio INT
@@ -312,11 +311,11 @@ BEGIN
         SELECT 
             P.id_producto,
             P.nombre_producto,
-            ISNULL(SUM(T.cantidad), 0) AS CantidadVendida,
-            RANK() OVER (ORDER BY ISNULL(SUM(T.cantidad), 0) ASC) AS RangoVentas
-        FROM ddbba.Tiene T
-        INNER JOIN ddbba.Producto P ON T.id_producto = P.id_producto
-        INNER JOIN ddbba.Pedido Ped ON T.id_pedido = Ped.id_pedido
+            SUM(PS.cantidad) AS CantidadVendida,
+            RANK() OVER (ORDER BY SUM(PS.cantidad) ASC) AS RangoVentas
+        FROM ddbba.ProductoSolicitado PS
+        INNER JOIN ddbba.Producto P ON PS.id_producto = P.id_producto
+        INNER JOIN ddbba.Pedido Ped ON PS.id_factura = Ped.id_factura
         WHERE YEAR(Ped.fecha_pedido) = @Anio
           AND MONTH(Ped.fecha_pedido) = @Mes
         GROUP BY P.id_producto, P.nombre_producto
@@ -341,58 +340,64 @@ GO
 --REPORTE Mostrar total acumulado de ventas (o sea también mostrar el detalle) para una fecha y sucursal particulares 
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'ObtenerVentasPorFechaYSucursalXML') 
 BEGIN
-	 DROP PROCEDURE ObtenerVentasPorFechaYSucursalXML;
-	 PRINT 'SP ObtenerVentasPorFechaYSucursalXML ya existe -- > se creara nuevamente';
+	 DROP PROCEDURE Rep.ObtenerVentasPorFechaYSucursalXML;
+	 PRINT 'SP ObtenerVentasPorFechaYSucursalXML ya existe --> se creará nuevamente';
 END;
-go
-CREATE PROCEDURE ObtenerVentasPorFechaYSucursalXML
+GO
+CREATE PROCEDURE Rep.ObtenerVentasPorFechaYSucursalXML
     @Fecha DATE,
     @SucursalID INT
 AS
 BEGIN
-	--validar que el id de la sucursal exista
-	IF NOT EXISTS (SELECT 1 FROM ddbba.Sucursal WHERE @SucursalID=id_sucursal)
-	BEGIN
-		print 'sucursal no xiste';
-		return;
-	END;
+    SET NOCOUNT ON; 
 
+    -- Validar que la sucursal exista
+    IF NOT EXISTS (SELECT 1 FROM ddbba.Sucursal WHERE id_sucursal = @SucursalID)
+    BEGIN
+        PRINT 'Sucursal no existe';
+        RETURN;
+    END;
 
-    -- Cálculo del detalle de ventas y total acumulado en un solo bloque
+    -- Obtener detalle de ventas con total acumulado usando Window Functions
     WITH VentasDetalle AS (
         SELECT 
             P.id_producto,
             P.nombre_producto,
-            SUM(T.cantidad) AS CantidadVendida,
-            SUM(T.cantidad * P.precio_unitario) AS TotalVenta
-        FROM ddbba.Tiene T
-        INNER JOIN ddbba.Producto P ON T.id_producto = P.id_producto
-        INNER JOIN ddbba.Pedido Ped ON T.id_pedido = Ped.id_pedido
-        INNER JOIN ddbba.Venta V ON Ped.id_pedido = V.id_pedido
+            SUM(PS.cantidad) AS CantidadVendida,
+            SUM(PS.cantidad * P.precio_unitario) AS TotalVenta,
+            SUM(SUM(PS.cantidad * P.precio_unitario)) OVER()   AS TotalAcumulado -- Total acumulado de la venta
+        FROM ddbba.ProductoSolicitado PS
+        INNER JOIN ddbba.Producto P ON PS.id_producto = P.id_producto
+       INNER JOIN ddbba.Pedido Ped ON PS.id_factura = Ped.id_factura
         WHERE Ped.fecha_pedido = @Fecha
-          AND V.id_sucursal = @SucursalID
+          AND Ped.id_sucursal = @SucursalID
         GROUP BY P.id_producto, P.nombre_producto
     )
-
-    -- Generación del XML para los detalles de ventas y el total acumulado en un solo SELECT
+    
     SELECT 
         V.id_producto,
         V.nombre_producto,
         V.CantidadVendida,
-        V.TotalVenta
+        V.TotalVenta,
+        NULL AS TotalAcumulado -- Para diferenciar productos del total acumulado
     FROM VentasDetalle V
-    UNION ALL
+
+    UNION ALL 
+
     SELECT 
         NULL AS id_producto,
         'Total Acumulado' AS nombre_producto,
-        SUM(V.CantidadVendida) AS CantidadVendida,
-        SUM(V.TotalVenta) AS TotalVenta
+        NULL AS CantidadVendida,
+        NULL AS TotalVenta,
+        MAX(V.TotalAcumulado) AS TotalAcumulado -- Total acumulado en una sola fila
     FROM VentasDetalle V
-    FOR XML PATH('Producto'), ROOT('ReporteVentas');
+
+   FOR XML PATH('Producto'), ROOT('ReporteVentas');
 END;
 GO
+
 	/*-------------------EJECUTAR----------------------------------------------------
-	EXEC ObtenerVentasPorFechaYSucursalXML @Fecha = '2019-02-15', @SucursalID = 2;
+	EXEC Rep.ObtenerVentasPorFechaYSucursalXML @Fecha = '2019-02-15', @SucursalID = 2;
 	-------------------------------------------------------------------------------*/
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -400,67 +405,66 @@ GO
 --REPORTE Mensual: ingresando un mes y año determinado mostrar el vendedor de mayor monto facturado por sucursal. 
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Reporte_VendedorTopPorSucursal_XML') 
 BEGIN
-	 DROP PROCEDURE Reporte_VendedorTopPorSucursal_XML;
-	 PRINT 'SP Reporte_VendedorTopPorSucursal_XML ya existe -- > se creara nuevamente';
+	 DROP PROCEDURE Rep.Reporte_VendedorTopPorSucursal_XML;
+	 PRINT 'SP Reporte_VendedorTopPorSucursal_XML ya existe --> se creará nuevamente';
 END;
-go
-CREATE PROCEDURE Reporte_VendedorTopPorSucursal_XML
+GO
+CREATE PROCEDURE Rep.Reporte_VendedorTopPorSucursal_XML
     @Mes INT,
     @Anio INT
 AS
 BEGIN
-	--valida que se un mes valido 
-	IF @Mes>12 or @Mes<1
-	BEGIN
-		print 'mes invalido';
-		return;
-	END;
-	--valida que se un anio valido 
-	IF @Anio>YEAR(GETDATE()) or @Anio<1800
-	BEGIN
-		print 'Anio invalido';
-		return;
-	END;
-    SET NOCOUNT ON;
+    SET NOCOUNT ON; 
 
+    -- Validar mes y año
+    IF @Mes < 1 OR @Mes > 12
+    BEGIN
+        PRINT 'Mes inválido';
+        RETURN;
+    END;
+    
+    IF @Anio < 1800 OR @Anio > YEAR(GETDATE())
+    BEGIN
+        PRINT 'Año inválido';
+        RETURN;
+    END;
+
+    -- Obtener facturación por vendedor y determinar el top 1 por sucursal usando RANK()
     WITH FacturacionPorVendedor AS (
         SELECT 
             E.id_empleado,
             E.nombre AS NombreVendedor,
             S.id_sucursal,
             S.localidad AS LocalidadSucursal,
-            SUM(T.cantidad * P.precio_unitario) AS TotalFacturado
+            SUM(PS.cantidad * P.precio_unitario) AS TotalFacturado,
+            RANK() OVER (PARTITION BY S.id_sucursal ORDER BY SUM(PS.cantidad * P.precio_unitario) DESC) AS Rnk -- Ordena de mayor a menor dentro de cada sucursal
         FROM ddbba.Pedido Ped
-        INNER JOIN ddbba.Venta V ON Ped.id_pedido = V.id_pedido
-        INNER JOIN ddbba.Tiene T ON Ped.id_pedido = T.id_pedido
-        INNER JOIN ddbba.Producto P ON T.id_producto = P.id_producto
-        INNER JOIN ddbba.Empleado E ON V.id_empleado = E.id_empleado
-        INNER JOIN ddbba.Sucursal S ON V.id_sucursal = S.id_sucursal
-       WHERE MONTH(Ped.fecha_pedido) = @Mes AND YEAR(Ped.fecha_pedido) = @Anio
+		INNER JOIN ddbba.Empleado E ON Ped.id_empleado = E.id_empleado
+		INNER JOIN ddbba.Sucursal S ON Ped.id_sucursal = S.id_sucursal
+        INNER JOIN ddbba.ProductoSolicitado PS ON Ped.id_factura = PS.id_factura
+        INNER JOIN ddbba.Producto P ON PS.id_producto = P.id_producto
+        
+       
+        WHERE MONTH(Ped.fecha_pedido) = @Mes 
+          AND YEAR(Ped.fecha_pedido) = @Anio
         GROUP BY E.id_empleado, E.nombre, S.id_sucursal, S.localidad
-    ),
-    MaxFacturacionPorSucursal AS (
-        SELECT 
-            id_sucursal, 
-            MAX(TotalFacturado) AS MaxFacturado
-        FROM FacturacionPorVendedor
-        GROUP BY id_sucursal
     )
+
+    -- Seleccionar solo los mejores vendedores (RANK = 1) por sucursal
     SELECT 
-        FV.id_sucursal as Id_sucursal,
-        FV.LocalidadSucursal AS localidad,
+        FV.id_sucursal AS Id_sucursal,
+        FV.LocalidadSucursal AS Localidad,
         FV.id_empleado AS Id_empleado,
         FV.NombreVendedor AS Vendedor,
         FV.TotalFacturado AS Total_facturado
     FROM FacturacionPorVendedor FV
-    INNER JOIN MaxFacturacionPorSucursal MF 
-        ON FV.id_sucursal = MF.id_sucursal 
-        AND FV.TotalFacturado = MF.MaxFacturado
+    WHERE FV.Rnk = 1 -- Solo los vendedores top por sucursal
     FOR XML PATH('Reporte'), ROOT('FacturacionMensual');
 END;
-go
+GO
+
 	/*----------------EJECUTAR----------------------------------------
-	EXEC Reporte_VendedorTopPorSucursal_XML @Mes = 2, @Anio = 2019;
+	EXEC Rep.Reporte_VendedorTopPorSucursal_XML @Mes = 2, @Anio = 2019;
 	----------------------------------------------------------------*/
 
 
