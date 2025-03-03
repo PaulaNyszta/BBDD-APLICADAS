@@ -171,7 +171,7 @@ ELSE
 	END;
 go
 
---TABLA Producto_Solicitado
+--TABLA ProductoSolicitado
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.ProductoSolicitado') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.ProductoSolicitado (

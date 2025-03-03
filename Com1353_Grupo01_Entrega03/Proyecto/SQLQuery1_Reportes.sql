@@ -35,38 +35,37 @@ BEGIN
         PRINT 'Año inválido';
         RETURN;
     END;
-
     -- Consulta para obtener el total facturado por día de la semana 
-    SELECT 
-        DATENAME(WEEKDAY, Ped.fecha_pedido) AS DiaSemana, 
-        SUM(PS.cantidad * P.precio_unitario) OVER (PARTITION BY DATENAME(WEEKDAY, Ped.fecha_pedido)) AS TotalFacturado
-    FROM ddbba.ProductoSolicitado PS 
-    INNER JOIN ddbba.Producto P 
-        ON PS.id_producto = P.id_producto
-    INNER JOIN ddbba.Pedido Ped 
-        ON Ped.id_factura = PS.id_factura
-    WHERE MONTH(Ped.fecha_pedido) = @Mes 
-        AND YEAR(Ped.fecha_pedido) = @Anio
-    GROUP BY DATENAME(WEEKDAY, Ped.fecha_pedido)
-    ORDER BY MIN(Ped.fecha_pedido)
+	WITH VentasDelMes as (
+	SELECT ped.fecha_pedido, precio_unitario,cantidad
+	FROM ddbba.Pedido ped
+	INNER JOIN ddbba.ProductoSolicitado ps ON ps.id_factura=ped.id_factura
+	INNER JOIN ddbba.Producto p ON p.id_producto = ps.id_producto
+	WHERE MONTH(ped.fecha_pedido) = @Mes and YEAR(ped.fecha_pedido) = @Anio
+	)
+
+	SELECT DATENAME(WEEKDAY, fecha_pedido) AS DiaSemana, 
+			SUM(precio_unitario*cantidad) as TotalFacturado
+	FROM VentasDelMes
+	GROUP BY DATENAME(WEEKDAY, fecha_pedido)
     FOR XML PATH('Dia'), ROOT('FacturacionMensual');
 END;
 GO
 
 
 		/*----------EJECUTAR------------------------
-		EXEC Rep.Reporte_FacturacionMensual_XML 02,2019
+		EXEC Rep.Reporte_FacturacionMensual_XML 03,2019
 		------------------------------------------*/
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+--Trimestral: mostrar el total facturado por turnos de trabajo por mes.
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'ObtenerFacturacionPorTrimestreXML') 
 BEGIN
     DROP PROCEDURE Rep.ObtenerFacturacionPorTrimestreXML;
     PRINT 'SP ObtenerFacturacionPorTrimestreXML ya existe -- > se creara nuevamente';
 END;
 GO
-
 CREATE PROCEDURE Rep.ObtenerFacturacionPorTrimestreXML
     @Anio INT,
     @Trimestre INT
@@ -110,29 +109,26 @@ BEGIN
         SET @MesFin = 12;
     END;
 
-    -- Generar consulta en formato XML usando funciones de ventana
+
     SELECT
         E.turno AS 'Turno',
-        MONTH(F.fecha) AS 'Mes',
-        SUM(T.cantidad * PR.precio_unitario) OVER (PARTITION BY E.turno, MONTH(F.fecha)) AS 'TotalFacturado'
+        MONTH(Ped.fecha_pedido) AS 'Mes',
+        SUM(PS.cantidad * Pr.precio_unitario) OVER (PARTITION BY E.turno, MONTH(Ped.fecha_pedido)) AS 'TotalFacturado'
     FROM
-        ddbba.Factura F
-    JOIN ddbba.Pedido PED ON F.id_pedido = PED.id_pedido
-    JOIN ddbba.Venta V ON V.id_pedido = PED.id_pedido
-    JOIN ddbba.Empleado E ON V.id_empleado = E.id_empleado
-    JOIN ddbba.Tiene T ON T.id_pedido = PED.id_pedido
-    JOIN ddbba.Producto PR ON T.id_producto = PR.id_producto
-    WHERE
-        YEAR(F.fecha) = @Anio
-        AND MONTH(F.fecha) BETWEEN @MesInicio AND @MesFin
+        ddbba.ProductoSolicitado PS
+    INNER JOIN ddbba.Pedido Ped ON PS.id_factura = Ped.id_factura
+	INNER JOIN ddbba.Empleado E ON E.id_empleado=Ped.id_empleado
+	INNER JOIN ddbba.Producto Pr ON Pr.id_producto=PS.id_producto
+	WHERE YEAR(Ped.fecha_pedido) = @Anio
+        AND MONTH(Ped.fecha_pedido) BETWEEN @MesInicio AND @MesFin
     ORDER BY
-        E.turno, MONTH(F.fecha)
+        E.turno, MONTH(Ped.fecha_pedido) 
     FOR XML PATH('Factura'), ROOT('Facturas');
 END;
 GO
 
 		/*------------------EJECUTAR-------------------------------------------
-		EXEC ObtenerFacturacionPorTrimestreXML @Anio = 2019, @Trimestre = 1;
+		EXEC Rep.ObtenerFacturacionPorTrimestreXML @Anio = 2019, @Trimestre = 1;
 		--------------------------------------------------------------------*/
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -140,36 +136,49 @@ GO
 --REPORTE Por rango de fechas: ingresando un rango de fechas a demanda, debe poder mostrar la cantidad de productos vendidos en ese rango, ordenado de mayor a menor.
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Reporte_ProductosVendidos_XML') 
 BEGIN
-	 DROP PROCEDURE Reporte_ProductosVendidos_XML;
-	 PRINT 'SP ObtenerFacturacionPorTrimestreXML ya existe -- > se creara nuevamente';
+    DROP PROCEDURE Rep.Reporte_ProductosVendidos_XML;
+    PRINT 'SP Reporte_ProductosVendidos_XML ya existe -- > se creara nuevamente';
 END;
-go
-CREATE PROCEDURE Reporte_ProductosVendidos_XML
+GO
+CREATE PROCEDURE Rep.Reporte_ProductosVendidos_XML
     @FechaInicio DATE,
     @FechaFin DATE
 AS
 BEGIN
-	--validar que la fecha de inicio se mas cicas que la fecha de fin
-	IF @FechaFin<@FechaInicio
-	BEGIN
-		PRINT 'la fecha de fin debe ser mas grande que la fecha de inicio'
-		return;
-	END;
+    --validar que la fecha de inicio sea más chica que la fecha de fin
+    IF @FechaFin < @FechaInicio
+    BEGIN
+        PRINT 'La fecha de fin debe ser más grande que la fecha de inicio';
+        RETURN;
+    END;
+
+    ;WITH ProductoVentas AS (
+        SELECT 
+            P.id_producto,
+            P.nombre_producto,
+            SUM(PS.cantidad) AS CantidadVendida,
+            RANK() OVER (ORDER BY SUM(PS.cantidad) DESC) AS Ranking
+        FROM ddbba.ProductoSolicitado PS
+        INNER JOIN ddbba.Producto P ON PS.id_producto = P.id_producto
+        INNER JOIN ddbba.Pedido Ped ON PS.id_factura = Ped.id_factura
+        WHERE Ped.fecha_pedido BETWEEN @FechaInicio AND @FechaFin
+        GROUP BY P.id_producto, P.nombre_producto
+    )
     SELECT 
-        P.id_producto,
-        P.nombre_producto,
-        SUM(T.cantidad) AS CantidadVendida
-    FROM ddbba.Tiene T
-    INNER JOIN ddbba.Producto P ON T.id_producto = P.id_producto
-    INNER JOIN ddbba.Pedido Ped ON T.id_pedido = Ped.id_pedido
-    WHERE Ped.fecha_pedido BETWEEN @FechaInicio AND @FechaFin
-    GROUP BY P.id_producto, P.nombre_producto
-    ORDER BY CantidadVendida DESC
+        id_producto,
+        nombre_producto,
+        CantidadVendida,
+        Ranking
+    FROM ProductoVentas
+    ORDER BY Ranking 
     FOR XML PATH('Producto'), ROOT('ReporteProductosVendidos');
 END;
-go
+GO
+
+
 	/*------------------------EJECUTAR-----------------------------------------------------
-	EXEC Reporte_ProductosVendidos_XML '2019-01-01', '2020-01-01' --ejemplo '2024-02-01'
+	EXEC Reporte_ProductosVendidos_XML '2019-01-01', '2020-01-01' 
+	--ejemplo '2024-02-01'
 	-----------------------------------------------------------------------------------*/
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -177,11 +186,11 @@ go
 --REPORTE Por rango de fechas: ingresando un rango de fechas a demanda, debe poder mostrar la cantidad de productos vendidos en ese rango por sucursal, ordenado de mayor a menor.
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'ObtenerVentasPorRangoFechasXML') 
 BEGIN
-	 DROP PROCEDURE ObtenerVentasPorRangoFechasXML;
+	 DROP PROCEDURE Rep.ObtenerVentasPorRangoFechasXML;
 	 PRINT 'SP ObtenerFacturacionPorTrimestreXML ya existe -- > se creara nuevamente';
 END;
 go
-CREATE PROCEDURE ObtenerVentasPorRangoFechasXML
+CREATE PROCEDURE Rep.ObtenerVentasPorRangoFechasXML
     @FechaInicio DATE,
     @FechaFin DATE
 AS
@@ -194,11 +203,11 @@ BEGIN
 	END;
     SELECT 
         S.localidad AS Sucursal,
-        SUM(T.cantidad) AS CantidadVendida
-    FROM ddbba.Venta V
-    INNER JOIN ddbba.Pedido Ped ON V.id_pedido = Ped.id_pedido
-    INNER JOIN ddbba.Tiene T ON T.id_pedido = Ped.id_pedido
-    INNER JOIN ddbba.Sucursal S ON V.id_sucursal = S.id_sucursal
+        SUM(PS.cantidad) AS CantidadVendida
+    FROM ddbba.ProductoSolicitado PS
+    INNER JOIN ddbba.Pedido Ped ON PS.id_factura = Ped.id_factura
+    INNER JOIN ddbba.Sucursal S ON Ped.id_sucursal = S.id_sucursal
+
     WHERE Ped.fecha_pedido BETWEEN @FechaInicio AND @FechaFin
     GROUP BY S.localidad
     ORDER BY CantidadVendida DESC
@@ -206,65 +215,65 @@ BEGIN
 END;
 go
 	/*------------------------------EJECUTAR--------------------------------------------------------
-	EXEC ObtenerVentasPorRangoFechasXML @FechaInicio = '2019-01-01', @FechaFin = '2019-02-28';
+	EXEC Rep.ObtenerVentasPorRangoFechasXML @FechaInicio = '2019-01-01', @FechaFin = '2019-02-28';
 	--------------------------------------------------------------------------------------------*/
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
---REPORTE Mostrar los 5 productos más vendidos en un mes, por semana
+--REPORTE Mostrar los 5 productos más vendidos en un mes, por semana 
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'ObtenerTopProductosPorSemanaXML') 
 BEGIN
-	 DROP PROCEDURE ObtenerTopProductosPorSemanaXML;
-	 PRINT 'SP ObtenerFacturacionPorTrimestreXML ya existe -- > se creara nuevamente';
+    DROP PROCEDURE Rep.ObtenerTopProductosPorSemanaXML;
+    PRINT 'SP ObtenerTopProductosPorSemanaXML ya existe -- > se creara nuevamente';
 END;
-go
-CREATE PROCEDURE ObtenerTopProductosPorSemanaXML
-     @Mes INT ,
-	 @Anio INT
-  
+GO
+CREATE PROCEDURE Rep.ObtenerTopProductosPorSemanaXML
+     @Mes INT,
+     @Anio INT
 AS
 BEGIN
-	--valida que se un mes valido 
-	IF @Mes>12 or @Mes<1
-	BEGIN
-		print 'mes invalido';
-		return;
-	END;
-	--valida que se un anio valido 
-	IF @Anio>YEAR(GETDATE()) or @Anio<1800
-	BEGIN
-		print 'Anio invalido';
-		return;
-	END;
+    -- Validación del mes
+    IF @Mes > 12 OR @Mes < 1
+    BEGIN
+        PRINT 'Mes inválido';
+        RETURN;
+    END;
+
+    -- Validación del año
+    IF @Anio > YEAR(GETDATE()) OR @Anio < 1800
+    BEGIN
+        PRINT 'Año inválido';
+        RETURN;
+    END;
 
     WITH Semanas AS (
         SELECT 
-            (DATEPART(WEEK, Ped.fecha_pedido) - DATEPART(WEEK, DATEFROMPARTS(@Anio, @Mes, 1)) + 1) AS Semana,
+            DATEPART(WEEK, Ped.fecha_pedido) - DATEPART(WEEK, DATEFROMPARTS(@Anio, @Mes, 1)) + 1 AS Semana, --muestra la semana del mes y no del anio
             P.id_producto,
             P.nombre_producto,
-            SUM(T.cantidad) AS CantidadVendida
-        FROM ddbba.Tiene T
-        INNER JOIN ddbba.Producto P ON T.id_producto = P.id_producto
-        INNER JOIN ddbba.Pedido Ped ON T.id_pedido = Ped.id_pedido
+            SUM(PS.cantidad) AS CantidadVendida,
+            RANK() OVER (PARTITION BY DATEPART(WEEK, Ped.fecha_pedido) ORDER BY SUM(PS.cantidad) DESC) AS Ranking
+        FROM ddbba.ProductoSolicitado PS
+        INNER JOIN ddbba.Producto P ON PS.id_producto = P.id_producto
+        INNER JOIN ddbba.Pedido Ped ON PS.id_factura = Ped.id_factura
         WHERE YEAR(Ped.fecha_pedido) = @Anio
           AND MONTH(Ped.fecha_pedido) = @Mes
         GROUP BY DATEPART(WEEK, Ped.fecha_pedido), P.id_producto, P.nombre_producto
     )
     SELECT 
-        S.Semana,
-        S.id_producto,
-        S.nombre_producto,
-        S.CantidadVendida
-    FROM Semanas S
-    WHERE (SELECT COUNT(*) FROM Semanas S2 
-           WHERE S2.Semana = S.Semana 
-           AND S2.CantidadVendida >= S.CantidadVendida) <= 5
-    ORDER BY S.Semana, S.CantidadVendida DESC
+        Semana,
+        id_producto,
+        nombre_producto,
+        CantidadVendida
+    FROM Semanas
+    WHERE Ranking <= 5
+    ORDER BY Semana, Ranking
     FOR XML PATH('Producto'), ROOT('TopProductos');
 END;
-go
+GO
+
 	/*------------------EJECUTAR----------------------------------
-	EXEC ObtenerTopProductosPorSemanaXML @Mes = 3, @Anio = 2019;
+	EXEC Rep.ObtenerTopProductosPorSemanaXML @Mes = 3, @Anio = 2019;
 	------------------------------------------------------------*/
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -272,34 +281,39 @@ go
 --REPORTE Mostrar los 5 productos menos vendidos en el mes. 
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'ObtenerMenoresProductosDelMesXML') 
 BEGIN
-	 DROP PROCEDURE ObtenerMenoresProductosDelMesXML;
-	 PRINT 'SP ObtenerMenoresProductosDelMesXML ya existe -- > se creara nuevamente';
+	 DROP PROCEDURE Rep.ObtenerMenoresProductosDelMesXML;
+	 PRINT 'SP ObtenerMenoresProductosDelMesXML ya existe --> se creará nuevamente';
 END;
-go
-CREATE PROCEDURE ObtenerMenoresProductosDelMesXML
+GO
+
+CREATE PROCEDURE Rep.ObtenerMenoresProductosDelMesXML
     @Mes INT,
-	@Anio INT
-    
+    @Anio INT
 AS
 BEGIN
-	--valida que se un mes valido 
-	IF @Mes>12 or @Mes<1
-	BEGIN
-		print 'mes invalido';
-		return;
-	END;
-	--valida que se un anio valido 
-	IF @Anio>YEAR(GETDATE()) or @Anio<1800
-	BEGIN
-		print 'Anio invalido';
-		return;
-	END;
+    SET NOCOUNT ON;
+
+    -- Validación del mes
+    IF @Mes > 12 OR @Mes < 1
+    BEGIN
+        PRINT 'Mes inválido';
+        RETURN;
+    END;
+
+    -- Validación del año
+    IF @Anio > YEAR(GETDATE()) OR @Anio < 1800
+    BEGIN
+        PRINT 'Año inválido';
+        RETURN;
+    END;
+
 
     WITH VentasMes AS (
         SELECT 
             P.id_producto,
             P.nombre_producto,
-            SUM(T.cantidad) AS CantidadVendida
+            ISNULL(SUM(T.cantidad), 0) AS CantidadVendida,
+            RANK() OVER (ORDER BY ISNULL(SUM(T.cantidad), 0) ASC) AS RangoVentas
         FROM ddbba.Tiene T
         INNER JOIN ddbba.Producto P ON T.id_producto = P.id_producto
         INNER JOIN ddbba.Pedido Ped ON T.id_pedido = Ped.id_pedido
@@ -307,15 +321,17 @@ BEGIN
           AND MONTH(Ped.fecha_pedido) = @Mes
         GROUP BY P.id_producto, P.nombre_producto
     )
-    SELECT TOP 5 -- Solo tomamos los 5 productos con menor cantidad vendida
+    SELECT 
         V.id_producto,
         V.nombre_producto,
         V.CantidadVendida
     FROM VentasMes V
-    ORDER BY V.CantidadVendida ASC -- Orden ascendente para los menos vendidos
+    WHERE V.RangoVentas <= 5 -- Filtra los 5 productos menos vendidos
+    ORDER BY V.CantidadVendida ASC 
     FOR XML PATH('Producto'), ROOT('BottomProductos');
 END;
 GO
+
 	/*------------EJECUTAR-----------------------------------------
 	EXEC ObtenerMenoresProductosDelMesXML  @Mes = 1,@Anio = 2019;
 	-------------------------------------------------------------*/
@@ -446,3 +462,8 @@ go
 	/*----------------EJECUTAR----------------------------------------
 	EXEC Reporte_VendedorTopPorSucursal_XML @Mes = 2, @Anio = 2019;
 	----------------------------------------------------------------*/
+
+
+
+
+
