@@ -3,7 +3,6 @@
 --o puede ejecutar todo juntos abajo
 Use Com1353G01
 -----------------------------------------------------------------------------------------------------------------------
--- 1. Procedimiento Almacenado para importar Electronic accessories.xlsx
 --Crear el Schema
 IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'imp')
 	BEGIN
@@ -12,6 +11,8 @@ IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'imp')
 	END;
 go
 
+
+-- 1. Procedimiento Almacenado para importar Electronic accessories.xlsx
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_ElectronicAccessories') 
 BEGIN
     DROP PROCEDURE imp.Importar_ElectronicAccessories;
@@ -41,6 +42,7 @@ FROM OPENROWSET(''Microsoft.ACE.OLEDB.12.0'',
     ''SELECT [Product], [Precio Unitario en dolares] FROM [Sheet1$]'')';
 
 EXEC sp_executesql @SQL;
+	
 	;WITH CTE AS (
 	 SELECT *, 
 			 ROW_NUMBER() OVER (PARTITION BY LTRIM(RTRIM(LOWER(nombre_producto))) ORDER BY fecha DESC) AS rn
@@ -87,7 +89,6 @@ BEGIN
     PRINT 'SP Importar_Productos_importados ya existe --> se borró';
 END;
 GO
-
 CREATE PROCEDURE imp.Importar_Productos_importados
     @RutaArchivo NVARCHAR(255)
 AS
@@ -214,9 +215,38 @@ BEGIN
     SET NOCOUNT ON;
     DECLARE @SQL NVARCHAR(MAX);
 
+<<<<<<< HEAD
     -- Crear tabla temporal global para el catálogo
     IF OBJECT_ID('tempdb..##Temp_Catalogo') IS NOT NULL
         DROP TABLE ##Temp_Catalogo;
+=======
+    --crear tabla temporal para cargar los datos del catalogo
+	CREATE TABLE #Temp (
+				id int identity(1,1),
+				linea VARCHAR(50),
+				nombre_producto  VARCHAR(100),
+				precio_unitario DECIMAL(10, 2),
+				precio_referencia decimal (10,2),
+				unidad varchar(10),
+				fecha datetime
+			)
+	
+		SET @SQL = ' 
+		BULK INSERT #Temp
+		FROM ''' + @RutaArchivo + '''
+		WITH (
+			FORMAT = ''CSV'',
+			FIRSTROW = 2,
+			FIELDTERMINATOR = '','',
+			ROWTERMINATOR = ''0X0a'',
+			CODEPAGE = ''65001'',
+			TABLOCK
+		);';
+		
+		EXEC sp_executesql @SQL;
+	--creamos taba de ERRORES que carge los nombres mal escritos de los productos
+	
+>>>>>>> e6ec30cad21111a8505a70c3a2fc513356e70d9a
 
     CREATE TABLE ##Temp_Catalogo (
         id INT IDENTITY(1,1),
@@ -487,20 +517,20 @@ go
 	/*OBSERVAR INSERCION
 	SELECT * FROM ddbba.MedioPago
 	*/
-
+	
 
 go
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- 6.Procedimiento para importar Ventas_registradas.csv
 --CLIENTES
-IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_Ventas_registradas_cliente') 
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_Ventas_registradas_cliente_pedido_productosolicitado') 
 BEGIN
-	 DROP PROCEDURE imp.Importar_Ventas_registradas_cliente;
-	 PRINT 'SP Importar_Ventas_registradas_cliente ya existe -- > se borro';
+	 DROP PROCEDURE imp.Importar_Ventas_registradas_cliente_pedido_productosolicitado;
+	 PRINT 'SP Importar_Ventas_registradas_cliente_pedido_productosolicitado ya existe -- > se borro';
 END;
 go
-CREATE PROCEDURE imp.Importar_Ventas_registradas_cliente
+CREATE PROCEDURE imp.Importar_Ventas_registradas_cliente_pedido_productosolicitado
     @RutaArchivo NVARCHAR(255)
 AS
 BEGIN 
@@ -522,7 +552,6 @@ BEGIN
 				id_empleado INT,
 				iden_pago VARCHAR(50),
 			)
-	
 		SET @SQL = ' 
 		BULK INSERT #Temp
 		FROM ''' + @RutaArchivo + '''
@@ -541,15 +570,35 @@ BEGIN
 		dni_cliente char(8),
 		id_mp int,
 		id_sucursal int;
+		
 
-		UPDATE t
+		UPDATE #Temp
 		SET estado = CASE WHEN CAST(NEWID() AS BINARY(1)) % 2 = 0 THEN 'Pagada' ELSE 'NoPagada' END,
 		dni_cliente = RIGHT('00000000' + CAST(ABS(CHECKSUM(NEWID())) % 90000000 + 10000000 AS VARCHAR(8)), 8), --COLOCAR API
-        t.id_mp = mp.id_mp,
+		localidad = CASE
+		WHEN localidad = 'Yangon' THEN 'San Justo'
+		WHEN localidad = 'Naypyitaw' THEN 'Ramos Mejia'
+		WHEN localidad = 'Mandalay' THEN 'Lomas del Mirador'
+					END,
+		tipo_mp = CASE
+		WHEN tipo_mp = 'Credit card' THEN 'Tarjeta de credito'
+		WHEN tipo_mp = 'Ewallet' THEN 'Billetera Electronica'
+		WHEN tipo_mp = 'Cash' THEN 'Efectivo'
+					END;
+
+		UPDATE t
+		SET
+		t.id_mp = mp.id_mp,
         t.id_sucursal = s.id_sucursal
-    FROM #Temp t
-    INNER JOIN ddbba.MedioPago mp ON mp.tipo = t.tipo_mp
-    INNER JOIN ddbba.Sucursal s ON s.localidad = t.localidad;
+		FROM #Temp t
+		INNER JOIN ddbba.MedioPago mp ON mp.tipo = t.tipo_mp
+		INNER JOIN ddbba.Sucursal s ON s.localidad = t.localidad;
+
+		--modificacmos la tabla para ingresar nuevos datos
+		ALTER TABLE #Temp
+		ADD nombre VARCHAR(50),
+		 apellido varchar(50),
+		 fnac DATE;
 
 		--cargar datos a CLIENTE
 		--generacion  de nombres aleatorios para cliente
@@ -560,26 +609,34 @@ BEGIN
 		INSERT INTO @nombres VALUES ('Juan'), ('María'), ('Carlos'), ('Ana'), ('Pedro'), ('Laura'), ('Luis'), ('Sofía');
 		INSERT INTO @apellidos VALUES ('Gomez'), ('Perez'), ('Lopez'), ('Fernandez'), ('Martinez'), ('Rodriguez'), ('Sanchez'), ('Diaz');
 
-		--modificacmos la tabla para ingresar nuevos datos
-		ALTER TABLE #Temp
-		ADD nombre VARCHAR(50),
-		 apellido varchar(50),
-		 tipo_cliente varchar(10),
-		 fnac DATE;
-
 		UPDATE #Temp
 		SET 
 			nombre = (SELECT TOP 1 nombre FROM @nombres ORDER BY NEWID()),
 			apellido = (SELECT TOP 1 apellido FROM @apellidos ORDER BY NEWID()),
 			fnac = DATEADD(DAY, -ABS(CHECKSUM(NEWID()) % 18250), GETDATE()); -- 50 años aleatorios
 
+		UPDATE #Temp SET	nombre_producto = REPLACE (nombre_producto, 'Ã©', 'é');
+		UPDATE #Temp SET	nombre_producto = REPLACE (nombre_producto, 'Ã±', 'ñ');
+		UPDATE #Temp SET 	nombre_producto = REPLACE (nombre_producto, 'Ã³', 'ó');
+		UPDATE #Temp SET 	nombre_producto = REPLACE (nombre_producto, 'Ã¡', 'á');
+		UPDATE #Temp SET 	nombre_producto = REPLACE (nombre_producto, 'Ãº', 'ú');
+		UPDATE #Temp SET 	nombre_producto = REPLACE (nombre_producto, 'Âº', 'º');
+		UPDATE #Temp SET 	nombre_producto = REPLACE (nombre_producto, 'Ã‘', 'Ñ');
+		UPDATE #Temp SET 	nombre_producto = REPLACE (nombre_producto, 'Ã­', 'í'); 
+		UPDATE #Temp SET 	nombre_producto = REPLACE (nombre_producto, 'å˜', 'ñ');
+		UPDATE #Temp SET 	nombre_producto = REPLACE (nombre_producto, 'Ãƒº', 'Ãº'); 
+		UPDATE #Temp SET 	nombre_producto = REPLACE (nombre_producto, 'Ã', 'Á');
+
+
 		ALTER TABLE #Temp
 		ADD id_producto int;
+
 		UPDATE t
 		SET
 		t.id_producto=P.id_producto
 		FROM #temp t
-		INNER JOIN ddbba.Producto P ON P.nombre_producto=tmp.nombre_producto and P.precio_unitario=tmp.precio_unitario
+		INNER JOIN ddbba.Producto P ON P.nombre_producto=t.nombre_producto and P.precio_unitario=t.precio_unitario
+
 ------------------------------------------------------------------------------------------------			
 
 		--insertamos los datos en CLIENTE
@@ -593,6 +650,7 @@ BEGIN
 			fnac
 		FROM #Temp tmp
 		WHERE NOT EXISTS (SELECT 1 FROM ddbba.Cliente c WHERE c.dni=tmp.dni_cliente)
+		
 		--insertamos datos en PEDIDO
 		INSERT INTO ddbba.Pedido (id_factura, fecha_pedido, hora_pedido, dni_cliente, id_mp, iden_pago, id_empleado, id_sucursal, tipo_factura, estado_factura)
 		SELECT 
@@ -607,60 +665,30 @@ BEGIN
 			t.tipo_factura,
 			t.estado
 		FROM #Temp t
+		WHERE NOT EXISTS (SELECT 1 FROM ddbba.Pedido P WHERE P.id_factura=t.id_factura);
 		--insertar los datos en la tabla correspondiente PRODUCTOSOLICITADO	
 		INSERT INTO ddbba.ProductoSolicitado (id_factura, id_producto, cantidad)
 		SELECT
 			id_factura,
 			id_producto,
 			cantidad
-		FROM #Temp tmp;
+		FROM #Temp;
 
 	DROP TABLE #Temp;
-
 END;
 go
 
-
-EXEC imp.Importar_Ventas_registradas_cliente 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Ventas_registradas.csv';
+	--EJECUTAR EL STORE PROCEDURE--------------------------------------------------------------------------------------------------------------------------
+	EXEC imp.Importar_Ventas_registradas_cliente_pedido_productosolicitado 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Ventas_registradas.csv';
+	------------------------------------------------------------------------------------------------------------------------------------------------------
+	
 	/*OBSERVAR INSERCION
 	SELECT  * FROM ddbba.Cliente
-	*/
-
-	/*OBSERVAR INSERCION
 	SELECT * FROM ddbba.Pedido
 	SELECT * FROM ddbba.ProductoSolicitado
-
 	*/
 
 
-
-   /* -- Insertar relaciones en ProveedorProvee
-		INSERT INTO ddbba.ProveedorProvee (id_proveedor, id_producto)
-		SELECT 
-			p.id_proveedor,
-			pr.id_producto
-		FROM #Temp tmp
-		LEFT JOIN ddbba.Proveedor p ON tmp.proveedor = p.nombre
-		LEFT JOIN ddbba.Producto pr ON tmp.nombre_producto = pr.nombre_producto;
-		*/
-
-
---CODIGO COMPLEMENTARIO PARA PODER EJECUTAR TODO JUNTO
-/*
---EJECUTAR
-EXEC Importar_ElectronicAccessories 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Electronic accessories.xlsx';
-GO
-EXEC Importar_Productos_importados 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Productos_importados.xlsx';
-GO
-EXEC Importar_Catalogo 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\catalogo.csv', 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx'
-GO
-EXEC Importar_Informacion_complementaria 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx';
-GO
-EXEC Insertar_MediosDePago;
-GO
-EXEC Importar_Ventas_registradas 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Ventas_registradas.csv'
-=======
->>>>>>> c917d293e55f04979b72a0a0cd6e9eadd110c714
 
 
 /*
