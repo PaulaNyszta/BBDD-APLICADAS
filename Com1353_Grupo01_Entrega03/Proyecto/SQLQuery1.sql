@@ -201,6 +201,8 @@ BEGIN
 	    precio_unitario DECIMAL(10,2),
 		cantidad INT,
 		monto DECIMAL (10,2),
+		cantidadADevolver int,
+		motivo Varchar(255)
 	    CONSTRAINT FKNotaCredito2 FOREIGN KEY (id_factura) REFERENCES ddbba.Pedido(id_factura),
 	    CONSTRAINT FKNotaCredito3 FOREIGN KEY (dni_cliente) REFERENCES ddbba.Cliente(dni)
     );
@@ -522,78 +524,6 @@ PRINT 'Valores insertados correctamente'
 END;
 go
 
---SP PARA NOTA CREDITO
-IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarNotaCredito')
-BEGIN
-	DROP PROCEDURE Procedimientos.insertarNotaCredito;
-END;
-go
-CREATE PROCEDURE Procedimientos.insertarNotaCredito(
-	@fecha_emision DATETIME,
-	@dni_cliente char(8),
-	@id_factura CHAR(12),
-	@nombre_producto VARCHAR(100),
-	@precio_unitario decimal (10,2),
-	@cantidad int,
-	@monto decimal (10,2)
-	)
-AS
-BEGIN
-	--verificar que la fecha no sea futura
-	IF @fecha_emision > GETDATE()
-	BEGIN
-		PRINT 'la fecha de emision no puede ser futura';
-		RETURN;
-	END;
-	--verificacion que la fecha de emision no sea null
-		IF @fecha_emision IS NULL
-	BEGIN
-		PRINT 'la fecha de emision no puede ser nula.';
-		RETURN;
-	END;
-	--verificacion que el cliente exista
-	IF NOT EXISTS (SELECT 1 FROM ddbba.Cliente WHERE @dni_cliente=dni)
-	BEGIN
-		PRINT 'No existe el cliente';
-		RETURN;
-	END;
-	--verificacion que la factura exista
-	IF NOT EXISTS (SELECT 1 FROM ddbba.Pedido WHERE @id_factura=id_factura)
-	BEGIN
-		PRINT 'No existe la factura';
-		RETURN;
-	END;
-	--verificacion que el producto exista
-	IF NOT EXISTS (SELECT 1 FROM ddbba.Producto WHERE @nombre_producto=nombre_producto)
-	BEGIN
-		PRINT 'No existe el producto';
-		RETURN;
-	END;
-	--verificacion que el precio unitario no sea nulo
-		IF @precio_unitario IS NULL
-	BEGIN
-		PRINT 'El precio unitario no puede ser nulo';
-		RETURN;
-	END;
-	--verificacion que la cantidad no sea nula
-		IF @cantidad IS NULL
-	BEGIN
-		PRINT 'La cantidad no puede ser nula';
-		RETURN;
-	END;
-	--verificacion que el motno no sea nulo
-		IF @monto IS NULL
-	BEGIN
-		PRINT 'El monto no puede ser nulo';
-		RETURN;
-	END;
-
-INSERT INTO ddbba.NotaCredito(fecha_emision,dni_cliente,id_factura,nombre_producto,precio_unitario, cantidad,monto)
-VALUES (@fecha_emision,@dni_cliente,@id_factura,@nombre_producto,@precio_unitario, @cantidad,@monto);
-PRINT 'Valores insertados correctamente'
-END;
-go
-
 --SP PARA MEDIO DE PAGO
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarMedioPago')
 BEGIN
@@ -710,7 +640,7 @@ BEGIN
 END;
 go
 
---SP PARA Producto_Solicitado
+--SP PARA ProductoSolicitado
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarProducto_Solicitado')
 BEGIN
 	DROP PROCEDURE Procedimientos.insertarProductoSolicitado;
@@ -754,3 +684,104 @@ BEGIN
 END;
 go
 
+--SP PARA NOTA CREDITO
+IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarNotaCredito')
+BEGIN
+	DROP PROCEDURE Procedimientos.insertarNotaCredito;
+END;
+go
+CREATE PROCEDURE Procedimientos.insertarNotaCredito(
+		@id_empleado INT,
+		@id_factura CHAR(12),
+		@cantidadADevolver int, --cantidad de unidades a devolver
+		@motivo VARCHAR(255) --descripcion de porque se va a realizar la devolucion
+
+)
+AS
+BEGIN
+		--verificacion de los parametros de entrada
+		--verificar que existe el id_factura
+		IF NOT EXISTS (SELECT 1 FROM ddbba.Pedido WHERE @id_factura=id_factura)
+		BEGIN
+			PRINT 'NO EXISTE LA FACTURA INGRESADA';
+			RETURN;
+		END;
+		--verificar que existe el id_empleado
+		IF NOT EXISTS (SELECT 1 FROM ddbba.Empleado WHERE @id_empleado=id_empleado)
+		BEGIN
+			PRINT 'NO EXISTE EL EMPLEADO INGRESADO';
+			RETURN;
+		END;
+
+	DECLARE @estado_factura VARCHAR(10);
+	DECLARE @cargo VARCHAR(50);
+
+	-- Verificar si la factura está pagada
+	SELECT @estado_factura = estado_factura
+	FROM ddbba.Pedido
+	WHERE id_factura = @id_factura;
+
+	IF @estado_factura <> 'Pagado' 
+	BEGIN
+		PRINT 'Error: La nota de crédito solo puede generarse para facturas pagadas.';
+		RETURN;
+	END;
+
+	-- Verificar si el empleado es un Supervisor
+	SELECT @cargo = cargo 
+	FROM ddbba.Empleado
+	WHERE id_empleado = @id_empleado;
+
+	IF @cargo <> 'Supervisor'
+	BEGIN
+		PRINT 'Error: Solo los supervisores pueden generar notas de crédito.';
+		RETURN;
+	END;
+
+		--generar fecha actual
+		DECLARE @fecha_emision DATETIME;
+		SET @fecha_emision = GETDATE();
+
+		--busco dni_cliente
+		DECLARE @dni_cliente INT;
+		SELECT @dni_cliente=dni_cliente FROM ddbba.Pedido Ped WHERE Ped.id_factura=@id_factura;
+
+		--nombre del producto
+		DECLARE @nombre_producto VARCHAR(100);
+		SELECT  @nombre_producto=nombre_producto
+		FROM ddbba.Producto P
+		INNER JOIN ddbba.ProductoSolicitado PS ON P.id_producto=PS.id_producto
+		WHERE @id_factura=PS.id_factura;
+
+		--precio del producto
+		DECLARE @precio_unitario DECIMAL(10,2);
+		SELECT  @precio_unitario=precio_unitario
+		FROM ddbba.Producto P
+		INNER JOIN ddbba.ProductoSolicitado PS ON P.id_producto=PS.id_producto
+		WHERE @id_factura=PS.id_factura;
+
+		--cantidad
+		DECLARE @cantidad INT;
+		SELECT  @cantidad=cantidad
+		FROM ddbba.ProductoSolicitado PS
+		WHERE @id_factura=PS.id_factura;
+
+			--verificacion que la cantidad a devolver no sea mayor a la pagada
+			IF @cantidadADevolver > @cantidad
+				BEGIN
+			PRINT 'La cantidad no puede mayor a la pagada';
+			RETURN;
+				END;
+		--monto
+		DECLARE @monto DECIMAL(10,2);
+		SET  @monto = (@cantidad*@precio_unitario);
+
+
+
+	
+
+INSERT INTO ddbba.NotaCredito(fecha_emision,dni_cliente,id_factura,nombre_producto,precio_unitario, cantidad,monto,cantidadADevolver,motivo)
+VALUES (@fecha_emision,@dni_cliente,@id_factura,@nombre_producto,@precio_unitario, @cantidad,@monto,@cantidadADevolver,@motivo);
+PRINT 'Valores insertados correctamente'
+END;
+go
