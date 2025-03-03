@@ -43,7 +43,7 @@ FROM OPENROWSET(''Microsoft.ACE.OLEDB.12.0'',
 EXEC sp_executesql @SQL;
 	;WITH CTE AS (
 	 SELECT *, 
-			 ROW_NUMBER() OVER (PARTITION BY LTRIM(RTRIM(LOWER(nombre_producto))), precio_unitario ORDER BY fecha DESC) AS rn
+			 ROW_NUMBER() OVER (PARTITION BY LTRIM(RTRIM(LOWER(nombre_producto))) ORDER BY fecha DESC) AS rn
 	 FROM ##Temp
 	)
 	DELETE FROM CTE WHERE rn > 1;
@@ -124,9 +124,7 @@ BEGIN
     ;WITH CTE AS (
         SELECT *, 
                ROW_NUMBER() OVER (
-                   PARTITION BY LTRIM(RTRIM(LOWER(nombre_producto))), 
-                                precio_unitario, 
-                                cantidadPorUnidad 
+                   PARTITION BY LTRIM(RTRIM(LOWER(nombre_producto)))
                    ORDER BY fecha DESC) AS rn
         FROM ##Temp
     )
@@ -204,77 +202,104 @@ GO
 -- 3. Procedimiento para importar catalogo.csv
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_Catalogo') 
 BEGIN
-	 DROP PROCEDURE imp.Importar_Catalogo;
-	 PRINT 'SP Importar_Catalogo ya existe -- > se borro';
+     DROP PROCEDURE imp.Importar_Catalogo;
+     PRINT 'SP Importar_Catalogo ya existe --> se borró';
 END;
-go
+GO
+
 CREATE PROCEDURE imp.Importar_Catalogo
     @RutaArchivo NVARCHAR(255), @RutaArchivoClasificacion NVARCHAR(255)
 AS
 BEGIN 
-	DECLARE @SQL NVARCHAR(MAX);
+    SET NOCOUNT ON;
+    DECLARE @SQL NVARCHAR(MAX);
 
-    --crear tabla temporal para cargar los datos del catalogo
-	CREATE TABLE #Temp (
-				id int identity(1,1),
-				linea VARCHAR(50),
-				nombre_producto  VARCHAR(100),
-				precio_unitario DECIMAL(10, 2),
-				precio_referencia decimal (10,2),
-				unidad varchar(10),
-				fecha datetime
-			)
-	
-		SET @SQL = ' 
-		BULK INSERT #Temp
-		FROM ''' + @RutaArchivo + '''
-		WITH (
-			FORMAT = ''CSV'',
-			FIRSTROW = 2,
-			FIELDTERMINATOR = '','',
-			ROWTERMINATOR = ''0X0a'',
-			CODEPAGE = ''65001'',
-			TABLOCK
-		);';
-		
-		EXEC sp_executesql @SQL;
+    -- Crear tabla temporal global para el catálogo
+    IF OBJECT_ID('tempdb..##Temp_Catalogo') IS NOT NULL
+        DROP TABLE ##Temp_Catalogo;
 
-	--crear tabla temporal para cargar los datos de la clasificacion de archivos
-	CREATE TABLE #Temp_clasificacion (
-				linea_clasificacion VARCHAR(50),
-				tipo_producto VARCHAR(50)
-			)
+    CREATE TABLE ##Temp_Catalogo (
+        id INT IDENTITY(1,1),
+        linea VARCHAR(50),
+        nombre_producto  VARCHAR(100),
+        precio_unitario DECIMAL(10,2),
+        precio_referencia DECIMAL(10,2),
+        unidad VARCHAR(10),
+        fecha DATETIME DEFAULT GETDATE()
+    );
     
-		SET @SQL =' 
-    INSERT INTO #Temp_clasificacion (linea_clasificacion, tipo_producto)
-    SELECT [Línea de producto],[Producto]
+    -- Importar datos desde CSV a ##Temp_Catalogo
+    SET @SQL = ' 
+    BULK INSERT ##Temp_Catalogo
+    FROM ''' + @RutaArchivo + '''
+    WITH (
+        FORMAT = ''CSV'',
+        FIRSTROW = 2,
+        FIELDTERMINATOR = '','',
+        ROWTERMINATOR = ''0X0a'',
+        CODEPAGE = ''65001'',
+        TABLOCK
+    );';
+    
+    EXEC sp_executesql @SQL;
+    PRINT 'Datos cargados en ##Temp_Catalogo.';
+
+    -- Crear tabla temporal global para la clasificación
+    IF OBJECT_ID('tempdb..##Temp_Clasificacion') IS NOT NULL
+        DROP TABLE ##Temp_Clasificacion;
+
+    CREATE TABLE ##Temp_Clasificacion (
+        linea_clasificacion VARCHAR(50),
+        tipo_producto VARCHAR(50)
+    );
+
+    -- Importar datos de clasificación desde Excel
+    SET @SQL =' 
+    INSERT INTO ##Temp_Clasificacion (linea_clasificacion, tipo_producto)
+    SELECT [Línea de producto], [Producto]
     FROM OPENROWSET(''Microsoft.ACE.OLEDB.12.0'',
         ''Excel 12.0;Database=' + @RutaArchivoClasificacion + ';HDR=YES'',
-        ''SELECT [Línea de producto],[Producto] FROM [Clasificacion productos$]'')';
-		EXEC sp_executesql @SQL;	
+        ''SELECT [Línea de producto], [Producto] FROM [Clasificacion productos$]'')';
+    
+    EXEC sp_executesql @SQL;
+    PRINT 'Datos cargados en ##Temp_Clasificacion.';
 
-		--que la categoria del archivo coincida con la categorias de los productos
-		DECLARE @linea VARCHAR(50);
-		SELECT @linea=linea_clasificacion
-		FROM #Temp_clasificacion tmpc INNER JOIN #Temp tmp ON tmp.linea=tmpc.tipo_producto
-		
+    -- Normalizar datos eliminando duplicados
+    ;WITH CTE AS (
+        SELECT *,
+               ROW_NUMBER() OVER (
+                   PARTITION BY LTRIM(RTRIM(LOWER(nombre_producto))) 
+                   ORDER BY fecha DESC) AS rn
+        FROM ##Temp_Catalogo
+    )
+    DELETE FROM CTE WHERE rn > 1;
+    PRINT 'Duplicados eliminados en ##Temp_Catalogo.';
 
-		INSERT INTO ddbba.Producto (nombre_producto, precio_unitario, linea, precio_referencia, unidad, cantidadPorunidad, moneda, fecha)
-		SELECT 
-			nombre_producto,
-			precio_unitario, --precio unitario
-			(SELECT linea_clasificacion FROM #Temp_clasificacion WHERE tipo_producto=linea),
-			precio_referencia, --precio ref
-			unidad, --unidad
-			'', --cantxunidad
-			'ARS', --moneda
-			fecha --fecha
-		FROM #temp;
+    -- Insertar productos en ddbba.Producto evitando duplicados
+    INSERT INTO ddbba.Producto (nombre_producto, precio_unitario, linea, precio_referencia, unidad, cantidadPorUnidad, moneda, fecha)
+    SELECT 
+        c.nombre_producto,
+        c.precio_unitario,
+        cl.linea_clasificacion,
+        c.precio_referencia,
+        c.unidad,
+        '', -- cantidadPorUnidad
+        'ARS', -- moneda
+        c.fecha
+    FROM ##Temp_Catalogo c
+    LEFT JOIN ##Temp_Clasificacion cl ON c.linea = cl.tipo_producto
+  
+    PRINT 'Productos insertados correctamente en ddbba.Producto.';
 
-	DROP TABLE #Temp;
+    -- Eliminar tablas temporales globales
+    DROP TABLE ##Temp_Catalogo;
+    DROP TABLE ##Temp_Clasificacion;
+    PRINT 'Tablas temporales eliminadas.';
 
+    PRINT 'Importación completada correctamente.';
 END;
-go
+GO
+
 
 
 	--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos-------------------------ARCHIVO CATALOGO.CSV----------------------------------------------------ARCHIVO INFROMSCION_COMPLEMENTARIA.XLSX-------------------------
@@ -282,7 +307,7 @@ go
 	EXEC imp.Importar_Catalogo 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Productos\catalogo.csv', 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Informacion_complementaria.xlsx'
 	------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 	/*OBSERVAR INSERCION
-	SELECT * FROM ddbba.Producto
+	SELECT * FROM ddbba.Producto 
 	*/
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -341,6 +366,7 @@ END;
 go
 	
 	--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos------------------------------------------------------------------
+	EXEC imp.Importar_Informacion_complementaria_sucursal 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Informacion_complementaria.xlsx';
 	EXEC imp.Importar_Informacion_complementaria_sucursal 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Informacion_complementaria.xlsx';
 	----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 	/*OBSERVAR INSERCION
@@ -351,65 +377,66 @@ go
 --EMPLEADO
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_Informacion_complementaria_empleado') 
 BEGIN
-	 DROP PROCEDURE imp.Importar_Informacion_complementaria_empleado;
-	 PRINT 'SP Importar_Informacion_complementaria_empleado ya existe -- > se borro';
+    DROP PROCEDURE imp.Importar_Informacion_complementaria_empleado;
+    PRINT 'SP Importar_Informacion_complementaria_empleado ya existe -- > se borro';
 END;
 go
 CREATE PROCEDURE imp.Importar_Informacion_complementaria_empleado
-    @RutaArchivo NVARCHAR(255), @Clave NVARCHAR(255)
+    @RutaArchivo NVARCHAR(255)
 AS
 BEGIN
-	--crear tabla temporal para cargar EMPLEADOS 
-		CREATE TABLE #Temp_empleado (
-			id_empleado int,
-			nombre VARCHAR(100),
-			apellido VARCHAR(100),
-			dni INT,
-			direccion VARCHAR(255),		
-			email_personal VARCHAR(255),
-			email_empresarial VARCHAR(255),
-			turno VARCHAR(50),
-			cargo VARCHAR(50),
-			sucursal VARCHAR(100)
-			)
-		
-    --ingreso de EMPLEADOS
-	DECLARE @SQL NVARCHAR(MAX);
-	SET @SQL =' 
-    INSERT INTO #Temp_empleado (id_empleado,nombre,apellido,dni,direccion,email_personal,email_empresarial,turno,cargo,sucursal)
-    SELECT [Legajo/ID],[Nombre],[Apellido],[DNI],[Direccion],[email personal],[email empresa],[Turno],[Cargo],[Sucursal]
+    -- Crear tabla temporal para cargar EMPLEADOS
+    CREATE TABLE #Temp_empleado (
+        id_empleado INT,
+        nombre VARCHAR(100),
+        apellido VARCHAR(100),
+        dni INT,
+        direccion VARCHAR(255),
+        email_personal VARCHAR(255),
+        email_empresarial VARCHAR(255),
+        turno VARCHAR(50),
+        cargo VARCHAR(50),
+        sucursal VARCHAR(100)
+    );
+
+    -- Ingreso de EMPLEADOS
+    DECLARE @SQL NVARCHAR(MAX);
+    SET @SQL = '
+    INSERT INTO #Temp_empleado (id_empleado, nombre, apellido, dni, direccion, email_personal, email_empresarial, turno, cargo, sucursal)
+    SELECT [Legajo/ID], [Nombre], [Apellido], [DNI], [Direccion], [email personal], [email empresa], [Turno], [Cargo], [Sucursal]
     FROM OPENROWSET(''Microsoft.ACE.OLEDB.12.0'',
         ''Excel 12.0;Database=' + @RutaArchivo + ';HDR=YES'',
-        ''SELECT [Legajo/ID],[Nombre],[Apellido],[DNI],[Direccion],[email personal],[email empresa],[Turno],[Cargo],[Sucursal] FROM [Empleados$]'')';
-
+        ''SELECT [Legajo/ID], [Nombre], [Apellido], [DNI], [Direccion], [email personal], [email empresa], [Turno], [Cargo], [Sucursal] FROM [Empleados$]'')
+    ';
+    
     EXEC sp_executesql @SQL;
-	
 
-	INSERT INTO ddbba.Empleado (id_empleado,cuil,dni,direccion,apellido,nombre,email_personal, email_empresarial,turno,cargo,id_sucursal)
-	SELECT
-		id_empleado,
-		ENCRYPTBYPASSPHRASE(@Clave,CAST((FLOOR(RAND() * 8) + 20) AS VARCHAR) + '-' + CAST(dni AS VARCHAR) + '-' + CAST((FLOOR(RAND() * 9) + 1) AS VARCHAR)) as Cuil,
-		ENCRYPTBYPASSPHRASE(@Clave,CAST(dni AS VARCHAR)) as DNI,
-		ENCRYPTBYPASSPHRASE(@Clave,direccion) as Direccion,
-		ENCRYPTBYPASSPHRASE(@Clave,apellido) as Apellido,
-		ENCRYPTBYPASSPHRASE(@Clave,nombre) as Nombre,
-		ENCRYPTBYPASSPHRASE(@Clave,email_personal) as Email_personal,
-		ENCRYPTBYPASSPHRASE(@Clave,email_empresarial) as Email_empresarial,
-		turno,
-		cargo,
-		(SELECT id_sucursal FROM ddbba.Sucursal S WHERE tmpe.sucursal=S.localidad)
-	FROM #Temp_empleado tmpe
-	WHERE id_empleado IS NOT NULL and NOT EXISTS (SELECT 1 FROM ddbba.Empleado WHERE id_empleado=tmpe.id_empleado);
+    -- Insertar datos en la tabla final sin encriptación
+    INSERT INTO ddbba.Empleado (id_empleado, cuil, dni, direccion, apellido, nombre, email_personal, email_empresarial, turno, cargo, id_sucursal)
+    SELECT
+        id_empleado,
+        CAST((FLOOR(RAND() * 8) + 20) AS VARCHAR) + '-' + CAST(dni AS VARCHAR) + '-' + CAST((FLOOR(RAND() * 9) + 1) AS VARCHAR) as Cuil,
+        dni as DNI,
+        direccion as Direccion,
+        apellido as Apellido,
+        nombre as Nombre,
+        email_personal as Email_personal,
+        email_empresarial as Email_empresarial,
+        turno,
+        cargo,
+        (SELECT id_sucursal FROM ddbba.Sucursal S WHERE tmpe.sucursal = S.localidad) as Id_Sucursal
+    FROM #Temp_empleado tmpe
+    WHERE id_empleado IS NOT NULL AND NOT EXISTS (SELECT 1 FROM ddbba.Empleado WHERE id_empleado = tmpe.id_empleado);
 
+    DROP TABLE #Temp_empleado;
 
-	DROP TABLE #Temp_empleado;
-
-END; --fin SP
+END; -- Fin SP
 go
+
 
 	--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos------------------------------------------------------------------
 	EXEC imp.Importar_Informacion_complementaria_empleado 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Informacion_complementaria.xlsx', 'Contrasenia';
-	EXEC imp.Importar_Informacion_complementaria_empleado 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx';
+	EXEC imp.Importar_Informacion_complementaria_empleado 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Informacion_complementaria.xlsx'
 	----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 	/*OBSERVAR INSERCION
 	SELECT * FROM ddbba.Empleado
@@ -419,18 +446,23 @@ go
 	SELECT id_empleado, 
        CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', nombre)) AS Nombre,
        CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', apellido)) AS Apellido,
-       CONVERT(INT, CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', CAST(dni AS VARCHAR)))) AS DNI,
+       CONVERT(NVARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', dni)) AS dni,
        CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', direccion)) AS Direccion,
        CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', cuil)) AS Cuil,
        CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', email_personal)) AS Email_personal,
        CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', email_empresarial)) AS Email_empresarial,
-	   turno,
-	   cargo,
-	   id_sucursal
-	FROM ddbba.Empleado;
+       turno,
+       cargo,
+       id_sucursal
+FROM ddbba.Empleado;
+
 */
 
-go
+
+
+
+
+
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- 5. Procedimiento para crear los MEDIOS DE PAGO
