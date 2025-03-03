@@ -117,7 +117,7 @@ ALTER TABLE ddbba.Empleado
     email_personal_enc VARBINARY(MAX),
     email_empresarial_enc VARBINARY(MAX);
 GO
-	select * from ddbba.Empleado
+
 --TRIGGER PARA QUE CADA VEZ QUE SE INGRESA UN REGISTRO A LA TABLA, LOS DATOS SENSIBLES SON ENCRIPTADOS
 IF  EXISTS (SELECT 1 FROM sys.triggers WHERE name='trg_Empleado_Encrypt')
 BEGIN
@@ -164,19 +164,14 @@ END;
 
 GO
 
-DROP TRIGGER IF EXISTS trg_Empleado_Encrypt ;
-/*--INSERCION DE DATOS-----------------------------
-INSERT INTO ddbba.Empleado (id_empleado, nombre, apellido, dni, direccion, cuil, email_personal, email_empresarial, turno, cargo, id_sucursal)
-VALUES (500, 'Carlos', 'Gómez', 32456789, 'Av. Siempre Viva 123, Buenos Aires', '20-32456789-3', 'carlos.gomez@email.com', 'cgomez@empresa.com', 'Mañana', 'Analista de Datos', 3),
-(501, 'Mariana', 'López', 29876543, 'Calle Falsa 456, Córdoba', '27-29876543-5', 'mariana.lopez@email.com', 'mlopez@empresa.com', 'Tarde', 'Desarrolladora', 2);
-*/
+--DROP TRIGGER IF EXISTS trg_Empleado_Encrypt ;
 
 
-	/*-------VER LA TABLA ENCRIPTADA-----
-	SELECT * FROM DDBBA.Empleado
-	---------------------------------*/
+-------VER LA TABLA ENCRIPTADA-----
+SELECT * FROM DDBBA.Empleado
 
-/*--DESENCRIPTAR Y VER LA TABLA ENTERA
+
+--DESENCRIPTAR Y VER LA TABLA ENTERA
 SELECT id_empleado, 
        CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Xg7#pV@1zK$9mTqW', nombre_enc)) AS nombre,
        CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Xg7#pV@1zK$9mTqW', apellido_enc)) AS apellido,
@@ -189,8 +184,6 @@ SELECT id_empleado,
 	   cargo,
 	   id_sucursal
 FROM ddbba.Empleado;
-*/
-	/*-------VER LA TABLA DESENCRIPTADA-----
-	SELECT * FROM DDBBA.Empleado
-	---------------------------------*/
+
+
 
