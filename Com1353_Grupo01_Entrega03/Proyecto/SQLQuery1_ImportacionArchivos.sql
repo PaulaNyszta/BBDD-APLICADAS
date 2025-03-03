@@ -3,7 +3,7 @@
 --o puede ejecutar todo juntos abajo
 Use Com1353G01
 -----------------------------------------------------------------------------------------------------------------------
---Crear el Schema
+--Crear el Schema de impotacion
 IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'imp')
 	BEGIN
 		EXEC('CREATE SCHEMA imp');
