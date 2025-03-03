@@ -97,7 +97,6 @@ BEGIN
         proveedor NVARCHAR(255)
     );
 
-
     -- Importar datos desde Excel a #Temp
     DECLARE @SQL NVARCHAR(MAX);
     SET @SQL = '
@@ -108,8 +107,6 @@ BEGIN
         ''SELECT [NombreProducto], [Categoría], [CantidadPorUnidad], [PrecioUnidad], [Proveedor] FROM [Listado de Productos$]'')';
     
     EXEC sp_executesql @SQL;
-
- 
 
     -- Insertar productos
     INSERT INTO ddbba.Producto (nombre_producto, precio_unitario, linea, precio_referencia, unidad, cantidadPorUnidad, moneda, fecha)
@@ -124,15 +121,12 @@ BEGIN
         ''  -- fecha (debe revisarse si es necesario manejarla de otra forma)
     FROM #Temp;
 
-    -- Insertar relaciones en Provee
-    INSERT INTO ddbba.ProveedorProvee (id_proveedor, id_producto)
-    SELECT p.id_proveedor, pi.id_producto
-    FROM #ProductosInsertados pi
-    JOIN ddbba.Proveedor p ON pi.nombre_producto = p.nombre;
+
+  
 
     -- Eliminar la tabla temporal
     DROP TABLE #Temp;
-    DROP TABLE #ProductosInsertados;
+ 
 
     PRINT 'Importación completada correctamente.';
 END;
@@ -140,7 +134,8 @@ GO
 
 
 --ejecutar el Store procedure
-EXEC Importar_Productos_importados 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Productos\Productos_importados.xlsx';
+EXEC imp.Importar_Productos_importados 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Productos\Productos_importados.xlsx';
+EXEC imp.Importar_Productos_importados 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Productos\Productos_importados.xlsx';
 go
 
 
@@ -426,13 +421,14 @@ go
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- 6.Procedimiento para importar Ventas_registradas.csv
-IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_Ventas_registradas') 
+--CLIENTES
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_Ventas_registradas_cliente') 
 BEGIN
-	 DROP PROCEDURE imp.Importar_Ventas_registradas;
-	 PRINT 'SP Importar_Ventas_registradas ya existe -- > se borro';
+	 DROP PROCEDURE imp.Importar_Ventas_registradas_cliente;
+	 PRINT 'SP Importar_Ventas_registradas_cliente ya existe -- > se borro';
 END;
 go
-CREATE PROCEDURE imp.Importar_Ventas_registradas
+CREATE PROCEDURE imp.Importar_Ventas_registradas_cliente
     @RutaArchivo NVARCHAR(255)
 AS
 BEGIN 
@@ -467,6 +463,21 @@ BEGIN
 		);';
 		    EXEC sp_executesql @SQL;
 
+		--cargar datos a PEDIDO
+		ALTER TABLE #Temp
+		ADD estado VARCHAR(10),
+		dni_cliente char(8),
+		id_mp int,
+		id_sucursal int;
+
+		UPDATE t
+		SET estado = CASE WHEN CAST(NEWID() AS BINARY(1)) % 2 = 0 THEN 'Pagada' ELSE 'NoPagada' END,
+		dni_cliente = RIGHT('00000000' + CAST(ABS(CHECKSUM(NEWID())) % 90000000 + 10000000 AS VARCHAR(8)), 8), --COLOCAR API
+        t.id_mp = mp.id_mp,
+        t.id_sucursal = s.id_sucursal
+    FROM #Temp t
+    INNER JOIN ddbba.MedioPago mp ON mp.tipo = t.tipo_mp
+    INNER JOIN ddbba.Sucursal s ON s.localidad = t.localidad;
 
 		--cargar datos a CLIENTE
 		--generacion  de nombres aleatorios para cliente
@@ -488,48 +499,47 @@ BEGIN
 		SET 
 			nombre = (SELECT TOP 1 nombre FROM @nombres ORDER BY NEWID()),
 			apellido = (SELECT TOP 1 apellido FROM @apellidos ORDER BY NEWID()),
-			fnac = DATEADD(DAY, -ABS(CHECKSUM(NEWID()) % 18250), GETDATE()) -- 50 años aleatorios
-		
-		
-		
+			fnac = DATEADD(DAY, -ABS(CHECKSUM(NEWID()) % 18250), GETDATE()); -- 50 años aleatorios
+
+		ALTER TABLE #Temp
+		ADD id_producto int;
+		UPDATE t
+		SET
+		t.id_producto=P.id_producto
+		FROM #temp t
+		INNER JOIN ddbba.Producto P ON P.nombre_producto=tmp.nombre_producto and P.precio_unitario=tmp.precio_unitario
+------------------------------------------------------------------------------------------------			
+
 		--insertamos los datos en CLIENTE
-		INSERT INTO ddbba.Cliente (genero,tipo,apellido,nombre,fecha_nac)
+		INSERT INTO ddbba.Cliente (dni,genero,tipo,apellido,nombre,fecha_nac)
 		SELECT
+			dni_cliente,
 			genero,
 			tipo,
 			apellido,
 			nombre,
 			fnac
-		FROM #Temp
-		---------------------------------------------------------------------
-		--cargar datos a PEDIDO
-		ALTER TABLE #Temp
-		ADD estado VARCHAR(10);
-		UPDATE #Temp
-		SET estado = CASE WHEN CAST(NEWID() AS BINARY(1)) % 2 = 0 THEN 'Pagado' ELSE 'NoPagado' END;
-
-
-	INSERT INTO ddbba.Pedido (id_factura, fecha_pedido, hora_pedido, id_cliente, id_mp, iden_pago,id_empleado,id_sucursal,tipo_factura, estado_factura)
-	SELECT 
-		id_factura,
-		fecha,
-		hora,
-		(SELECT id_cliente FROM ddbba.Cliente),
-		(SELECT id_mp FROM ddbba.MedioPago MP WHERE tipo_mp=MP.tipo),
-		iden_pago,
-		id_empleado,
-		(SELECT id_sucursal FROM ddbba.Sucursal S WHERE S.localidad=localidad),
-		tipo_factura,
-		estado
-	FROM #Temp ;
-
-	-------------------------------------------------------------
-
+		FROM #Temp tmp
+		WHERE NOT EXISTS (SELECT 1 FROM ddbba.Cliente c WHERE c.dni=tmp.dni_cliente)
+		--insertamos datos en PEDIDO
+		INSERT INTO ddbba.Pedido (id_factura, fecha_pedido, hora_pedido, dni_cliente, id_mp, iden_pago, id_empleado, id_sucursal, tipo_factura, estado_factura)
+		SELECT 
+			t.id_factura,
+			t.fecha,
+			t.hora,
+			t.dni_cliente,
+			t.id_mp,
+			t.iden_pago,
+			t.id_empleado,
+			t.id_sucursal,
+			t.tipo_factura,
+			t.estado
+		FROM #Temp t
 		--insertar los datos en la tabla correspondiente PRODUCTOSOLICITADO	
 		INSERT INTO ddbba.ProductoSolicitado (id_factura, id_producto, cantidad)
 		SELECT
 			id_factura,
-			(SELECT id_producto FROM ddbba.Producto P WHERE P.nombre_producto=tmp.nombre_producto),
+			id_producto,
 			cantidad
 		FROM #Temp tmp;
 
@@ -539,20 +549,28 @@ END;
 go
 
 
+EXEC imp.Importar_Ventas_registradas_cliente 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Ventas_registradas.csv';
+	/*OBSERVAR INSERCION
+	SELECT  * FROM ddbba.Cliente
+	*/
 
-	--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos------------------------------------------------------------------
-	EXEC imp.Importar_Ventas_registradas 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Ventas_registradas.csv';
-	-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 	/*OBSERVAR INSERCION
 	SELECT * FROM ddbba.Pedido
-	SELECT  * FROM ddbba.Cliente
 	SELECT * FROM ddbba.ProductoSolicitado
 
 	*/
 
-go
 
 
+   /* -- Insertar relaciones en ProveedorProvee
+		INSERT INTO ddbba.ProveedorProvee (id_proveedor, id_producto)
+		SELECT 
+			p.id_proveedor,
+			pr.id_producto
+		FROM #Temp tmp
+		LEFT JOIN ddbba.Proveedor p ON tmp.proveedor = p.nombre
+		LEFT JOIN ddbba.Producto pr ON tmp.nombre_producto = pr.nombre_producto;
+		*/
 
 
 --CODIGO COMPLEMENTARIO PARA PODER EJECUTAR TODO JUNTO
