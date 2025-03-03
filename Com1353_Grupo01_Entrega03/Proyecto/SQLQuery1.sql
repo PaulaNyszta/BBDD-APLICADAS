@@ -116,7 +116,7 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Cliente') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Cliente (
-			id_cliente INT IDENTITY (1,1)PRIMARY KEY,
+			dni char(8) PRIMARY KEY,
 			genero VARCHAR(10),
 			tipo VARCHAR(10),
 			apellido VARCHAR(100),
@@ -151,14 +151,14 @@ IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G0
 			id_factura CHAR(12)  CHECK (id_factura LIKE '[0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9][0-9][0-9]') PRIMARY KEY,
 			fecha_pedido DATE,
 			hora_pedido TIME,
-			id_cliente INT ,
+			dni_cliente char(8) ,
 			id_mp INT,
 			iden_pago VARCHAR(50),
 			id_empleado INT,
 			id_sucursal INT,
             tipo_factura CHAR(1) CHECK (tipo_factura IN ('A', 'B', 'C')),
 			estado_factura VARCHAR(10) CHECK (estado_factura IN ('Pagada', 'NoPagada')),
-			CONSTRAINT FKPedido1 FOREIGN KEY (id_cliente) REFERENCES ddbba.Cliente(id_cliente),
+			CONSTRAINT FKPedido1 FOREIGN KEY (dni_cliente) REFERENCES ddbba.Cliente(dni),
 			CONSTRAINT FKPedido2 FOREIGN KEY (id_mp) REFERENCES ddbba.MedioPago (id_mp),
 			CONSTRAINT FKPedido3 FOREIGN KEY (id_empleado) REFERENCES ddbba.Empleado (id_empleado),
 			CONSTRAINT FKPedido4 FOREIGN KEY (id_sucursal) REFERENCES ddbba.Sucursal (id_sucursal)
@@ -195,14 +195,14 @@ BEGIN
     CREATE TABLE ddbba.NotaCredito (
         id_nota_credito INT IDENTITY(1,1)PRIMARY KEY,
 		fecha_emision DATETIME ,
-		id_cliente INT,
+		dni_cliente char(8),
 		id_factura CHAR(12),
 		nombre_producto VARCHAR(100),
 	    precio_unitario DECIMAL(10,2),
 		cantidad INT,
 		monto DECIMAL (10,2),
 	    CONSTRAINT FKNotaCredito2 FOREIGN KEY (id_factura) REFERENCES ddbba.Pedido(id_factura),
-	    CONSTRAINT FKNotaCredito3 FOREIGN KEY (id_cliente) REFERENCES ddbba.Cliente(id_cliente)
+	    CONSTRAINT FKNotaCredito3 FOREIGN KEY (dni_cliente) REFERENCES ddbba.Cliente(dni)
     );
     PRINT 'Tabla NotaCredito creada correctamente.';
 END;
@@ -225,7 +225,7 @@ BEGIN
 END;
 go
 CREATE PROCEDURE Procedimientos.insertarCliente
-	@id INT,
+	@dni char(8),
 	@genero VARCHAR(50),
 	@tipo VARCHAR(10),
 	@apellido VARCHAR(50),
@@ -235,9 +235,15 @@ AS
 BEGIN
 
 	--validacion de que el cliente no se haya insertado
-	IF EXISTS (SELECT 1 FROM ddbba.Cliente WHERE @id=id_cliente)
+	IF EXISTS (SELECT 1 FROM ddbba.Cliente WHERE @dni=dni)
 	BEGIN
 		PRINT 'Cliente ya existente';
+		RETURN;
+	END;
+		--validacion de que el dni sea valido
+	IF  LEN(@dni)<>8 
+	BEGIN
+		PRINT 'Error. el dni debe ser de 8 digitos';
 		RETURN;
 	END;
 	-- Validación del que el genero sea female o male
@@ -260,8 +266,8 @@ BEGIN
 	END;
 
     --inserta datos en la tabla 
-	INSERT INTO ddbba.Cliente (id_cliente,genero, tipo, apellido,nombre,fecha_nac)
-	VALUES (@id,@genero,@tipo,@apellido,@nombre,@fnac);
+	INSERT INTO ddbba.Cliente (dni,genero, tipo, apellido,nombre,fecha_nac)
+	VALUES (@dni,@genero,@tipo,@apellido,@nombre,@fnac);
 	PRINT 'Cliente insertado correctamente';
 END;
 go
@@ -333,7 +339,7 @@ CREATE PROCEDURE Procedimientos.InsertarPedido (
 	@id_factura CHAR(12),
     @fecha_pedido DATE,
     @hora_pedido TIME,
-    @id_cliente INT,
+    @dni_cliente char(8),
     @id_mp INT,
     @iden_pago VARCHAR(50),
 	@id_empleado INT,
@@ -373,7 +379,7 @@ BEGIN
         RETURN;
     END;
  	-- Validación del que el cliente  no sea Null
-	IF (@id_cliente IS NULL)
+	IF (@dni_cliente IS NULL)
 	BEGIN
 		PRINT 'Error. El cliente no puede ser Nulo.';
 		RETURN;
@@ -419,8 +425,8 @@ BEGIN
 			RETURN;
 		END;
 	
-    INSERT INTO ddbba.Pedido (id_factura,fecha_pedido,hora_pedido,id_cliente,id_mp,iden_pago,id_empleado,id_sucursal,tipo_factura,estado_factura)
-    VALUES (@id_factura,@fecha_pedido,@hora_pedido,@id_cliente,@id_mp,@iden_pago,@id_empleado,@id_sucursal,@tipo_factura,@estado_factura);
+    INSERT INTO ddbba.Pedido (id_factura,fecha_pedido,hora_pedido,dni_cliente,id_mp,iden_pago,id_empleado,id_sucursal,tipo_factura,estado_factura)
+    VALUES (@id_factura,@fecha_pedido,@hora_pedido,@dni_cliente,@id_mp,@iden_pago,@id_empleado,@id_sucursal,@tipo_factura,@estado_factura);
 END;
 go
 
@@ -524,7 +530,7 @@ END;
 go
 CREATE PROCEDURE Procedimientos.insertarNotaCredito(
 	@fecha_emision DATETIME,
-	@id_cliente INT,
+	@dni_cliente char(8),
 	@id_factura CHAR(12),
 	@nombre_producto VARCHAR(100),
 	@precio_unitario decimal (10,2),
@@ -546,7 +552,7 @@ BEGIN
 		RETURN;
 	END;
 	--verificacion que el cliente exista
-	IF NOT EXISTS (SELECT 1 FROM ddbba.Cliente WHERE @id_cliente=id_cliente)
+	IF NOT EXISTS (SELECT 1 FROM ddbba.Cliente WHERE @dni_cliente=dni)
 	BEGIN
 		PRINT 'No existe el cliente';
 		RETURN;
@@ -582,7 +588,8 @@ BEGIN
 		RETURN;
 	END;
 
-INSERT INTO ddbba.NotaCredito(fecha_emision,id_cliente,id_factura,nombre_producto,precio_unitario, cantidad,monto) VALUES (@fecha_emision,@id_cliente,@id_factura,@nombre_producto,@precio_unitario, @cantidad,@monto);
+INSERT INTO ddbba.NotaCredito(fecha_emision,dni_cliente,id_factura,nombre_producto,precio_unitario, cantidad,monto)
+VALUES (@fecha_emision,@dni_cliente,@id_factura,@nombre_producto,@precio_unitario, @cantidad,@monto);
 PRINT 'Valores insertados correctamente'
 END;
 go
