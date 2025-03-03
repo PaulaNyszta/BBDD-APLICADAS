@@ -465,13 +465,13 @@ go
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- 6.Procedimiento para importar Ventas_registradas.csv
 --CLIENTES
-IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_Ventas_registradas_cliente') 
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_Ventas_registradas_cliente_pedido_productosolicitado') 
 BEGIN
-	 DROP PROCEDURE imp.Importar_Ventas_registradas_cliente;
-	 PRINT 'SP Importar_Ventas_registradas_cliente ya existe -- > se borro';
+	 DROP PROCEDURE imp.Importar_Ventas_registradas_cliente_pedido_productosolicitado;
+	 PRINT 'SP Importar_Ventas_registradas_cliente_pedido_productosolicitado ya existe -- > se borro';
 END;
 go
-CREATE PROCEDURE imp.Importar_Ventas_registradas_cliente
+CREATE PROCEDURE imp.Importar_Ventas_registradas_cliente_pedido_productosolicitado
     @RutaArchivo NVARCHAR(255)
 AS
 BEGIN 
@@ -619,75 +619,18 @@ BEGIN
 END;
 go
 
-EXEC imp.Importar_Ventas_registradas_cliente 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Ventas_registradas.csv';
+	--EJECUTAR EL STORE PROCEDURE--------------------------------------------------------------------------------------------------------------------------
+	EXEC imp.Importar_Ventas_registradas_cliente_pedido_productosolicitado 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Ventas_registradas.csv';
+	------------------------------------------------------------------------------------------------------------------------------------------------------
+	
 	/*OBSERVAR INSERCION
 	SELECT  * FROM ddbba.Cliente
-	*/
-
-	/*OBSERVAR INSERCION
 	SELECT * FROM ddbba.Pedido
 	SELECT * FROM ddbba.ProductoSolicitado
-
 	*/
 
-	
-
-   /* -- Insertar relaciones en ProveedorProvee
-		INSERT INTO ddbba.ProveedorProvee (id_proveedor, id_producto)
-		SELECT 
-			p.id_proveedor,
-			pr.id_producto
-		FROM #Temp tmp
-		LEFT JOIN ddbba.Proveedor p ON tmp.proveedor = p.nombre
-		LEFT JOIN ddbba.Producto pr ON tmp.nombre_producto = pr.nombre_producto;
-		*/
 
 
---CODIGO COMPLEMENTARIO PARA PODER EJECUTAR TODO JUNTO
-/*
---EJECUTAR
-EXEC Importar_ElectronicAccessories 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Electronic accessories.xlsx';
-GO
-EXEC Importar_Productos_importados 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\Productos_importados.xlsx';
-GO
-EXEC Importar_Catalogo 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Productos\catalogo.csv', 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx'
-GO
-EXEC Importar_Informacion_complementaria 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx';
-GO
-EXEC Insertar_MediosDePago;
-GO
-EXEC Importar_Ventas_registradas 'C:\Users\paula\OneDrive\Escritorio\UNLaM\BASE DE DATOS APLICADA\TP BBDD APLICADAS\TP_integrador_Archivos_1\Ventas_registradas.csv'
-
-
-CREATE TABLE #Temp (
-				id_factura CHAR(12),
-				tipo_factura CHAR(1),
-				localidad VARCHAR(100),
-				tipo VARCHAR(50), --tipo de cliente
-				genero VARCHAR(10),
-				nombre_producto  NVARCHAR(100),
-				precio_unitario DECIMAL(10, 2),
-				cantidad INT,
-				fecha DATE,
-				hora TIME,
-				tipo_mp VARCHAR(50), --tipo
-				id_empleado INT,
-				iden_pago VARCHAR(50),
-			)
-	
-	
-		BULK INSERT #Temp
-		FROM 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Ventas_registradas.csv'
-		WITH (
-			FIRSTROW = 2,
-			FIELDTERMINATOR = ';',
-			ROWTERMINATOR = '0X0a',
-			CODEPAGE = '65001',
-			TABLOCK
-		);;
-
-		select * from #Temp
-		drop table #temp
 
 /*
 CREATE PROCEDURE Borrar
