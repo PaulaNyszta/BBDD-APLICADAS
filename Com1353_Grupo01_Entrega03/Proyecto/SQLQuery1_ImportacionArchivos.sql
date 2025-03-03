@@ -24,44 +24,50 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Crear tabla temporal para cargar los datos
-    CREATE TABLE #Temp (
-        nombre_producto VARCHAR(100),
-        precio_unitario DECIMAL(10,2),
-        moneda VARCHAR(7),
-        fecha DATETIME DEFAULT GETDATE()
-    );
+    -- Crear tabla temporal para cargar los datos(Para que sea accesible en toda la ejecución del procedimiento, usa una tabla temporal global (##Temp))
+CREATE TABLE ##Temp (
+    nombre_producto VARCHAR(100),
+    precio_unitario DECIMAL(10,2),
+    moneda VARCHAR(7),
+    fecha DATETIME DEFAULT GETDATE()
+);
+
+DECLARE @SQL NVARCHAR(MAX);
+SET @SQL = '
+INSERT INTO ##Temp (nombre_producto, precio_unitario, moneda)
+SELECT Product, [Precio Unitario en dolares], ''USD''
+FROM OPENROWSET(''Microsoft.ACE.OLEDB.12.0'',
+    ''Excel 12.0;Database=' + @RutaArchivo + ';HDR=YES'',
+    ''SELECT [Product], [Precio Unitario en dolares] FROM [Sheet1$]'')';
+
+EXEC sp_executesql @SQL;
+	;WITH CTE AS (
+	 SELECT *, 
+			 ROW_NUMBER() OVER (PARTITION BY LTRIM(RTRIM(LOWER(nombre_producto))), precio_unitario ORDER BY fecha DESC) AS rn
+	 FROM ##Temp
+	)
+	DELETE FROM CTE WHERE rn > 1;
 
 
-    -- Importar datos desde Excel a #Temp
-    DECLARE @SQL NVARCHAR(MAX);
-    SET @SQL = '
-    INSERT INTO #Temp (nombre_producto, precio_unitario, moneda)
-    SELECT Product, [Precio Unitario en dolares], ''USD''
-    FROM OPENROWSET(''Microsoft.ACE.OLEDB.12.0'',
-        ''Excel 12.0;Database=' + @RutaArchivo + ';HDR=YES'',
-        ''SELECT [Product], [Precio Unitario en dolares] FROM [Sheet1$]'')';
+-- Ahora la tabla ya es accesible en toda la ejecución del procedimiento
+	INSERT INTO ddbba.Producto (nombre_producto, precio_unitario, linea, precio_referencia, unidad, cantidadPorunidad, moneda, fecha)
+		SELECT 
+		 nombre_producto, 
+		precio_unitario, 
+		'Electrodomestico', 
+						0,  
+						'', 
+						'', 
+					moneda, 
+					fecha
+	FROM ##Temp 
 
-    EXEC sp_executesql @SQL;
+	-- Eliminar la tabla temporal global después de usarla
+	DROP TABLE ##Temp;
 
-  
-  -- Insertar productos válidos en ddbba.Producto
-    INSERT INTO ddbba.Producto (nombre_producto, precio_unitario, linea, precio_referencia, unidad, cantidadPorunidad, moneda, fecha)
-    SELECT 
-        nombre_producto, 
-        precio_unitario, 
-        'Electrodomestico', 
-        0,  
-        '', 
-        '', 
-        moneda, 
-        fecha
-    FROM #Temp 
-	
-    -- Eliminar tablas temporales
-    DROP TABLE #Temp;
 END;
 GO
+
 
 	--FIJARSE
 	SELECT * FROM ddbba.Producto
@@ -78,86 +84,122 @@ GO
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_Productos_importados') 
 BEGIN
     DROP PROCEDURE imp.Importar_Productos_importados;
-    PRINT 'SP Importar_ElectronicAccessories ya existe --> se borró';
+    PRINT 'SP Importar_Productos_importados ya existe --> se borró';
 END;
 GO
+
 CREATE PROCEDURE imp.Importar_Productos_importados
     @RutaArchivo NVARCHAR(255)
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    -- Crear tabla temporal para cargar los datos
-    CREATE TABLE #Temp (
+    -- Crear tabla temporal global (##Temp)
+    IF OBJECT_ID('tempdb..##Temp') IS NOT NULL
+        DROP TABLE ##Temp;
+
+    CREATE TABLE ##Temp (
         nombre_producto NVARCHAR(255),
         precio_unitario DECIMAL(10,2),
         moneda VARCHAR(7),
         linea VARCHAR(100),
         cantidadPorUnidad NVARCHAR(50),
-        proveedor NVARCHAR(255)
+        proveedor NVARCHAR(255),
+        fecha DATETIME DEFAULT GETDATE()
     );
 
-    -- Importar datos desde Excel a #Temp
+    -- Importar datos desde Excel a ##Temp
     DECLARE @SQL NVARCHAR(MAX);
     SET @SQL = '
-    INSERT INTO #Temp (nombre_producto, linea, cantidadPorUnidad, precio_unitario, proveedor, moneda)
-    SELECT [NombreProducto], [Categoría], [CantidadPorUnidad], [PrecioUnidad], [Proveedor], ''ARS''
+    INSERT INTO ##Temp (nombre_producto, proveedor, linea, cantidadPorUnidad, precio_unitario, moneda)
+    SELECT [NombreProducto], [Proveedor], [Categoría], [CantidadPorUnidad], [PrecioUnidad], ''ARS''
     FROM OPENROWSET(''Microsoft.ACE.OLEDB.12.0'',
         ''Excel 12.0;Database=' + @RutaArchivo + ';HDR=YES'',
-        ''SELECT [NombreProducto], [Categoría], [CantidadPorUnidad], [PrecioUnidad], [Proveedor] FROM [Listado de Productos$]'')';
-    
-    EXEC sp_executesql @SQL;
+        ''SELECT [NombreProducto], [Proveedor], [Categoría], [CantidadPorUnidad], [PrecioUnidad] FROM [Listado de Productos$]'')';
 
-    -- Insertar productos
+    EXEC sp_executesql @SQL;
+    PRINT 'Datos cargados en ##Temp.';
+
+    -- Eliminar duplicados dentro de ##Temp
+    ;WITH CTE AS (
+        SELECT *, 
+               ROW_NUMBER() OVER (
+                   PARTITION BY LTRIM(RTRIM(LOWER(nombre_producto))), 
+                                precio_unitario, 
+                                cantidadPorUnidad 
+                   ORDER BY fecha DESC) AS rn
+        FROM ##Temp
+    )
+    DELETE FROM CTE WHERE rn > 1;
+
+    PRINT 'Duplicados eliminados en ##Temp.';
+
+    -- Insertar proveedores únicos en ddbba.Proveedor
+    INSERT INTO ddbba.Proveedor (nombre)
+    SELECT DISTINCT proveedor
+    FROM ##Temp
+    WHERE proveedor IS NOT NULL
+    AND NOT EXISTS (
+        SELECT 1 FROM ddbba.Proveedor p WHERE p.nombre = ##Temp.proveedor
+    );
+
+    PRINT 'Proveedores insertados correctamente.';
+
+    -- Insertar productos en ddbba.Producto (evitando duplicados)
     INSERT INTO ddbba.Producto (nombre_producto, precio_unitario, linea, precio_referencia, unidad, cantidadPorUnidad, moneda, fecha)
     SELECT 
         nombre_producto, 
         precio_unitario, 
         linea, 
-        0,  -- precio de referencia por defecto
-        '', -- unidad
+        0,  -- Precio de referencia por defecto
+        '', -- Unidad vacía
         cantidadPorUnidad, 
         moneda, 
-        ''  -- fecha (debe revisarse si es necesario manejarla de otra forma)
-    FROM #Temp;
-
-
+        fecha
+    FROM ##Temp
   
 
-    -- Eliminar la tabla temporal
-    DROP TABLE #Temp;
- 
+    PRINT 'Productos insertados correctamente.';
+
+    -- Insertar en ProveedorProvee (evitando duplicados)
+    INSERT INTO ddbba.ProveedorProvee (id_proveedor, id_producto)
+    SELECT DISTINCT 
+        p.id_proveedor, 
+        pr.id_producto
+    FROM ##Temp t
+    JOIN ddbba.Proveedor p ON p.nombre = t.proveedor
+    JOIN ddbba.Producto pr ON pr.nombre_producto = t.nombre_producto 
+                          AND pr.precio_unitario = t.precio_unitario
+                          AND pr.cantidadPorUnidad = t.cantidadPorUnidad
+
+
+    PRINT 'Relación Proveedor-Producto insertada correctamente.';
+
+    -- Eliminar la tabla temporal global después de la ejecución
+    DROP TABLE ##Temp;
+    PRINT '##Temp eliminada.';
 
     PRINT 'Importación completada correctamente.';
 END;
 GO
 
 
---ejecutar el Store procedure
-EXEC imp.Importar_Productos_importados 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Productos\Productos_importados.xlsx';
-EXEC imp.Importar_Productos_importados 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Productos\Productos_importados.xlsx';
-go
 
-
-
-----fijarse
-SELECT * FROM ddbba.Producto
-select * from ddbba.Proveedor
 
 ----borrar el SP
 --DROP PROCEDURE Importar_Productos_importados
 
 	--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos---------------------------------------------------------------------------
+	EXEC imp.Importar_Productos_importados 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Productos\Productos_importados.xlsx';
 	EXEC imp.Importar_Productos_importados 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Productos\Productos_importados.xlsx';
+	go
 	----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 	/*OBSERVAR INSERCION
 	SELECT * FROM ddbba.Producto
 	select * from ddbba.Proveedor
-	select * from ddbba.Provee
+	select * from ddbba.ProveedorProvee
 	*/
 
-go
-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- 3. Procedimiento para importar catalogo.csv
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_Catalogo') 
@@ -237,13 +279,11 @@ go
 
 	--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos-------------------------ARCHIVO CATALOGO.CSV----------------------------------------------------ARCHIVO INFROMSCION_COMPLEMENTARIA.XLSX-------------------------
 	EXEC imp.Importar_Catalogo 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Productos\catalogo.csv', 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Informacion_complementaria.xlsx';
-	EXEC imp.Importar_Catalogo 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Productos\catalogo.csv', 'C:\Users\luciano\Desktop\UNLAM\2025\BBDD-APLICADAS\TP_integrador_Archivos_1\Informacion_complementaria.xlsx'
+	EXEC imp.Importar_Catalogo 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Productos\catalogo.csv', 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Informacion_complementaria.xlsx'
 	------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 	/*OBSERVAR INSERCION
 	SELECT * FROM ddbba.Producto
 	*/
-
-go
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- 4. Procedimiento para importar Informacion_complementaria.xlsx 
