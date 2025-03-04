@@ -157,7 +157,7 @@ IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G0
 			id_empleado INT,
 			id_sucursal INT,
             tipo_factura CHAR(1) CHECK (tipo_factura IN ('A', 'B', 'C')),
-			estado_factura VARCHAR(10) CHECK (estado_factura IN ('Pagada', 'NoPagada')),
+			estado_factura VARCHAR(10) CHECK (estado_factura IN ('Pagado', 'NoPagado')),
 			CONSTRAINT FKPedido1 FOREIGN KEY (dni_cliente) REFERENCES ddbba.Cliente(dni),
 			CONSTRAINT FKPedido2 FOREIGN KEY (id_mp) REFERENCES ddbba.MedioPago (id_mp),
 			CONSTRAINT FKPedido3 FOREIGN KEY (id_empleado) REFERENCES ddbba.Empleado (id_empleado),
@@ -330,7 +330,7 @@ BEGIN
 	-- Validación de que el nombre y apellido no sea nulo
 	IF @nombre IS NULL OR @apellido IS NULL
 	BEGIN
-		PRINT'El Nombre y Apellid no deben ser nulos';
+		PRINT'El Nombre y Apellido no deben ser nulos';
 		RETURN;
 	END;
 		-- Validación de que el cargo no sea nulo
