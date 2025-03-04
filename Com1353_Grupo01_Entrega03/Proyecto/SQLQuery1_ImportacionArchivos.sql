@@ -11,7 +11,6 @@ IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'imp')
 	END;
 go
 
-
 -- 1. Procedimiento Almacenado para importar Electronic accessories.xlsx
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Importar_ElectronicAccessories') 
 BEGIN
@@ -30,7 +29,7 @@ CREATE TABLE ##Temp (
     nombre_producto VARCHAR(100),
     precio_unitario DECIMAL(10,2),
     moneda VARCHAR(7),
-    fecha DATETIME DEFAULT GETDATE()
+    fecha DATE DEFAULT GETDATE() --fecha del dia que se importan los datos
 );
 
 DECLARE @SQL NVARCHAR(MAX);
@@ -42,13 +41,37 @@ FROM OPENROWSET(''Microsoft.ACE.OLEDB.12.0'',
     ''SELECT [Product], [Precio Unitario en dolares] FROM [Sheet1$]'')';
 
 EXEC sp_executesql @SQL;
-	
+
+	--eliminamos los duplicados
 	;WITH CTE AS (
 	 SELECT *, 
 			 ROW_NUMBER() OVER (PARTITION BY LTRIM(RTRIM(LOWER(nombre_producto))) ORDER BY fecha DESC) AS rn
 	 FROM ##Temp
 	)
 	DELETE FROM CTE WHERE rn > 1;
+
+	select * from ##Temp
+
+/*
+	EXEC sp_configure 'show advanced options', 1;
+RECONFIGURE;
+EXEC sp_configure 'Ole Automation Procedures', 1; --estaba en 0
+RECONFIGURE;
+*/
+
+	--llamaremos a la API 
+	DECLARE @precioDolar FLOAT;
+	EXEC Procedimientos.GetDolarCotizacion '2025/03/04', @precioDolar OUTPUT;
+	PRINT CAST(@precioDolar as varchar)
+
+	--modificaremos los precios que dicen USD
+	UPDATE t
+	SET 
+
+DECLARE @precioCompra FLOAT;
+EXEC Procedimientos.GetDolarCotizacion '2025/03/04', @precioCompra OUTPUT;
+PRINT 'El valor de compra del dólar es: ' + CAST(@precioCompra AS VARCHAR);
+
 
 
 -- Ahora la tabla ya es accesible en toda la ejecución del procedimiento
@@ -70,6 +93,13 @@ EXEC sp_executesql @SQL;
 END;
 GO
 
+
+
+INSERT INTO ##Temp (nombre_producto, precio_unitario, moneda)
+SELECT Product, [Precio Unitario en dolares], 'USD'
+FROM OPENROWSET('Microsoft.ACE.OLEDB.12.0',
+    'Excel 12.0;Database=C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Productos\Electronic accessories.xlsx;HDR=YES',
+    'SELECT [Product], [Precio Unitario en dolares] FROM [Sheet1$]');
 
 	--FIJARSE
 	SELECT * FROM ddbba.Producto

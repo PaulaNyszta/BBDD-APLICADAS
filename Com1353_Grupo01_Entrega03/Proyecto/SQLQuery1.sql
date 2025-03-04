@@ -1244,3 +1244,58 @@ VALUES (@fecha_emision,@dni_cliente,@id_factura,@nombre_producto,@precio_unitari
 PRINT 'Valores insertados correctamente'
 END;
 go
+
+--SP PARA SABER LA COTIZACION DEL DOLAR (API)
+--generaremos el Store Procedure que se encarga de llamr a una API para saber el valor de la cotizacion del dolar en una fecha en particular
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'GetDolarCotizacion') 
+BEGIN
+    DROP PROCEDURE Procedimientos.GetDolarCotizacion;
+END;
+go
+CREATE PROCEDURE Procedimientos.GetDolarCotizacion
+    @fecha VARCHAR(10), -- Formato 'YYYY/MM/DD'
+	@compra FLOAT OUTPUT 
+AS
+BEGIN
+	DECLARE @url NVARCHAR(500), @response NVARCHAR(MAX), @object INT, @status INT;
+    DECLARE @fechaDisponible DATE, @fechaHoy DATE;	
+
+    -- Construir la URL de la API
+    SET @url = 'https://api.argentinadatos.com/v1/cotizaciones/dolares/blue/' + @fecha;
+
+    -- Crear un objeto de solicitud HTTP
+    EXEC @status = sp_OACreate 'MSXML2.XMLHTTP', @object OUT;
+    IF @status <> 0 RAISERROR('Error al crear el objeto HTTP', 16, 1);
+
+    -- Abrir la solicitud GET
+    EXEC @status = sp_OAMethod @object, 'open', NULL, 'GET', @url, 'false';
+    IF @status <> 0 RAISERROR('Error al abrir la conexión', 16, 1);
+
+    -- Enviar la solicitud
+    EXEC @status = sp_OAMethod @object, 'send';
+    IF @status <> 0 RAISERROR('Error al enviar la solicitud', 16, 1);
+
+    -- Obtener la respuesta
+    EXEC @status = sp_OAGetProperty @object, 'responseText', @response OUT;
+    IF @status <> 0 RAISERROR('Error al obtener la respuesta', 16, 1);
+
+    -- Liberar el objeto
+    EXEC sp_OADestroy @object;
+
+	--guardamos el valor de la compra del dolar
+	SELECT @compra=compra
+		FROM OPENJSON(@response)
+		WITH (
+			casa NVARCHAR(50),
+			compra FLOAT,
+			venta FLOAT,
+			fecha DATE
+		);
+END;
+go
+
+/*------EJECUTARLO------------------------------------------
+DECLARE @precioCompra FLOAT;
+EXEC Procedimientos.GetDolarCotizacion '2020/01/01', @precioCompra OUTPUT;
+PRINT 'El valor de compra del dólar es: ' + CAST(@precioCompra AS VARCHAR);
+*/
