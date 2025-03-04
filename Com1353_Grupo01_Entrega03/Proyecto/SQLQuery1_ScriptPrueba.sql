@@ -929,154 +929,698 @@ EXEC Procedimientos.eliminarProveedorProvee
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+--PRUEBA 6 TABLA CLIENTE
+
+--6.1. Insertar un cliente válido
+EXEC Procedimientos.insertarCliente 
+	@DNI = '12345678',
+	@Genero = 'Male',
+	@Tipo = 'Normal',
+	@Apellido = 'Gomez',
+	@Nombre = 'Pedro',
+	@Fnac = '1990-01-01';
+
+-- 6.1.1: Prueba con campos nulos: Debe devolver un mensaje de error indicando que ninguno de los campos puede ser nulo.
+EXEC Procedimientos.insertarCliente 
+@DNI = NULL, @Genero = 'Male', @Tipo = 'Normal', @Apellido = 'Gomez', @Nombre = 'Pedro', @Fnac = '1990-01-01';
+EXEC Procedimientos.insertarCliente 
+@DNI = '12345678', @Genero = NULL, @Tipo = 'Normal', @Apellido = 'Gomez', @Nombre = 'Pedro', @Fnac = '1990-01-01';
+
+-- 6.1.2: Prueba de cliente ya existente: Debe devolver un mensaje indicando que el cliente ya existe.
+EXEC Procedimientos.insertarCliente 
+@DNI = '12345678', @Genero = 'Male', @Tipo = 'Normal', @Apellido = 'Gomez', @Nombre = 'Pedro', @Fnac = '1990-01-01';
+
+-- 6.1.3: Prueba con DNI incorrecto (menos de 8 dígitos): Debe devolver un mensaje indicando que el DNI debe tener 8 dígitos.
+EXEC Procedimientos.insertarCliente 
+@DNI = '12345', @Genero = 'Male', @Tipo = 'Normal', @Apellido = 'Gomez', @Nombre = 'Pedro', @Fnac = '1990-01-01';
+
+-- 6.1.4: Prueba con DNI incorrecto (más de 8 dígitos): Debe devolver un mensaje indicando que el DNI debe tener 8 dígitos.
+EXEC Procedimientos.insertarCliente 
+@DNI = '1234566666689', @Genero = 'Male', @Tipo = 'Normal', @Apellido = 'Gomez', @Nombre = 'Pedro', @Fnac = '1990-01-01';
+
+-- 6.1.5: Prueba con género inválido: Debe devolver un mensaje indicando que el género debe ser "Female" o "Male".
+EXEC Procedimientos.insertarCliente 
+@DNI = '12345578', @Genero = 'Other', @Tipo = 'Normal', @Apellido = 'Gomez', @Nombre = 'Pedro', @Fnac = '1990-01-01';
+
+-- 6.1.6: Prueba con tipo de cliente inválido: Debe devolver un mensaje indicando que el tipo de cliente debe ser "Normal" o "Member".
+EXEC Procedimientos.insertarCliente 
+@DNI = '12345778', @Genero = 'Male', @Tipo = 'VIP', @Apellido = 'Gomez', @Nombre = 'Pedro', @Fnac = '1990-01-01';
+
+-- 6.1.7: Prueba con fecha de nacimiento futura: Debe devolver un mensaje indicando que la fecha de nacimiento no puede ser futura.
+EXEC Procedimientos.insertarCliente 
+@DNI = '12345688', @Genero = 'Male', @Tipo = 'Normal', @Apellido = 'Gomez', @Nombre = 'Pedro', @Fnac = '2050-01-01';
+
+--6.1.8 visualizar
+SELECT * FROM ddbba.Cliente;
+DELETE  FROM ddbba.Cliente WHERE dni_cliente = '12345678'
+
+--6.2. Modificacion
+--6.2.1 Modificar un cliente válido
+EXEC Procedimientos.modificarCliente 
+@DNI = '12345678',
+@Genero = 'Female',
+@Tipo = 'Member',
+@Apellido = 'Perez',
+@Nombre = 'Ana',
+@Fnac = '1985-05-15';
+
+-- 6.2.2: Prueba con cliente inexistente
+EXEC Procedimientos.modificarCliente 
+@DNI = '99999999', @Genero = 'Male', @Tipo = 'Normal', @Apellido = 'Lopez', @Nombre = 'Carlos', @Fnac = '1992-07-10';
+
+-- 6.2.3: Prueba con campos nulos
+EXEC Procedimientos.modificarCliente 
+@DNI = '12345678', @Genero = NULL, @Tipo = 'Normal', @Apellido = 'Perez', @Nombre = 'Ana', @Fnac = '1985-05-15';
+
+-- 6.2.4: Prueba con DNI incorrecto (menos de 8 dígitos)
+EXEC Procedimientos.modificarCliente 
+@DNI = '12345', @Genero = 'Male', @Tipo = 'Normal', @Apellido = 'Perez', @Nombre = 'Ana', @Fnac = '1985-05-15';
+
+-- 6.2.5: Prueba con género inválido
+EXEC Procedimientos.modificarCliente 
+@DNI = '12345678', @Genero = 'Other', @Tipo = 'Normal', @Apellido = 'Perez', @Nombre = 'Ana', @Fnac = '1985-05-15';
+
+-- 6.2.6: Prueba con tipo de cliente inválido
+EXEC Procedimientos.modificarCliente 
+@DNI = '12345678', @Genero = 'Male', @Tipo = 'VIP', @Apellido = 'Perez', @Nombre = 'Ana', @Fnac= '1985-05-15';
+
+-- 6.2.7: Prueba con fecha de nacimiento futura
+EXEC Procedimientos.modificarCliente 
+@DNI = '12345678', @Genero = 'Male', @Tipo = 'Normal', @Apellido = 'Perez', @Nombre = 'Ana', @Fnac = '2050-01-01';
+
+--6.2.8 visualizar
+SELECT * FROM ddbba.Cliente;
+
+--PRUEBA 6.3 ELIMINACION
+--6.3.1 Eliminar un cliente válido
+EXEC Procedimientos.eliminarCliente 
+@DNI = '12345678';
+
+--6.3.2 Intentar eliminar un cliente que no existe
+EXEC Procedimientos.eliminarCliente 
+@DNI = '99999999'; -- Debe devolver 'Error: Cliente no encontrado'
+
+--6.3.3 Intentar eliminar con DNI NULL
+EXEC Procedimientos.eliminarCliente 
+@DNI = NULL; -- Debe devolver 'Error: El DNI no puede ser NULL'
+
+--6.3.4 Intentar eliminar con DNI incorrecto (menos de 8 dígitos)
+EXEC Procedimientos.eliminarCliente 
+@DNI = '12345'; -- Debe devolver 'Error: El DNI debe tener 8 dígitos'
+
+--6.3.5 Intentar eliminar con DNI incorrecto (más de 8 dígitos)
+EXEC Procedimientos.eliminarCliente 
+@DNI = '123456789012'; -- Debe devolver 'Error: El DNI debe tener 8 dígitos'
+
+--6.3.6 visualizar
+SELECT * FROM ddbba.Cliente;
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
---prueba para SP insertarProveedor, Ejecute los siguientes juegos de prueba y  luego el SELECT para ver los resultados
--- datos invalidos
+--PRUEBA 7 NOTA DE CRÉDITO
 
-EXEC ddbba.insertarProveedor
-	'peperino'; --se debe agregar el proveedor
-EXEC ddbba.insertarProveedor
-	'peperino'; --debe dar error de existencia
-SELECT * FROM ddbba.Proveedor WHERE nombre = 'Peperino'; --observe que el proveedor fue agregado exitosamente
+--7.1 Insertar una nota de crédito válida
+EXEC Procedimientos.insertarNotaCredito 
+	@fecha_emision = '2024-02-01',
+	@dni_cliente = '12345678',
+	@id_factura = '001-01-0001',
+	@nombre_producto = 'Producto A',
+	@precio_unitario = 150.00,
+	@cantidad = 2,
+	@monto = 300.00;
+
+--7.1.2 Intentar insertar con fecha futura
+EXEC Procedimientos.insertarNotaCredito 
+	@fecha_emision = '2050-01-01',
+	@dni_cliente = '12345678',
+	@id_factura = 'FAC000001234',
+	@nombre_producto = 'Café',
+	@precio_unitario = 150.00,
+	@cantidad = 2,
+	@monto = 300.00; -- Debe devolver 'Error: La fecha de emisión no puede ser futura.'
+
+--7.1.3 Intentar insertar con cliente inexistente
+EXEC Procedimientos.insertarNotaCredito 
+	@fecha_emision = '2024-02-01',
+	@dni_cliente = '99999999',
+	@id_factura = 'FAC000001234',
+	@nombre_producto = 'Café',
+	@precio_unitario = 150.00,
+	@cantidad = 2,
+	@monto = 300.00; -- Debe devolver 'Error: No existe el cliente.'
+
+--7.1.4 Intentar insertar con factura inexistente
+EXEC Procedimientos.insertarNotaCredito 
+	@fecha_emision = '2024-02-01',
+	@dni_cliente = '12345678',
+	@id_factura = 'FAC999999999',
+	@nombre_producto = 'Café',
+	@precio_unitario = 150.00,
+	@cantidad = 2,
+	@monto = 300.00; -- Debe devolver 'Error: No existe la factura.'
+
+--7.1.5 Intentar insertar con producto inexistente
+EXEC Procedimientos.insertarNotaCredito 
+	@fecha_emision = '2024-02-01',
+	@dni_cliente = '12345678',
+	@id_factura = '001-01-0001',
+	@nombre_producto = 'Chocolate',
+	@precio_unitario = 200.00,
+	@cantidad = 1,
+	@monto = 200.00; -- Debe devolver 'Error: No existe el producto.'
+	
+--7.1.6 Intentar insertar con cantidad negativa
+EXEC Procedimientos.insertarNotaCredito 
+	@fecha_emision = '2024-02-01',
+	@dni_cliente = '12345678',
+	@id_factura = '001-01-0001',
+	@nombre_producto = 'Producto A',
+	@precio_unitario = 150.00,
+	@cantidad = -2,
+	@monto = 300.00; -- Debe devolver 'Error: La cantidad no puede ser negativa.'
+	
+--7.1.7 visualizar
+SELECT * FROM ddbba.NotaCredito;
+
+--7.2 Modificar
+--7.2.1 Modificar una nota de crédito válida
+EXEC Procedimientos.modificarNotaCredito 
+	@id_nota_credito = 1, 
+	@fecha_emision = '2024-02-01', 
+	@dni_cliente = '12345678', 
+	@id_factura = '001-01-0001', 
+	@nombre_producto = 'Producto A', 
+	@precio_unitario = 150.00, 
+	@cantidad = 2, 
+	@monto = 300.00; -- Debe modificar correctamente.
+
+--7.2.3 Intentar modificar con fecha futura
+EXEC Procedimientos.modificarNotaCredito 
+	@id_nota_credito = 1, 
+	@fecha_emision = '2050-01-01', 
+	@dni_cliente = '12345678', 
+	@id_factura = '001-01-0001', 
+	@nombre_producto = 'Producto A', 
+	@precio_unitario = 150.00, 
+	@cantidad = 2, 
+	@monto = 300.00; -- Debe devolver 'Error: La fecha de emisión no puede ser futura.'
+
+--7.2.4 Intentar modificar con cliente inexistente
+EXEC Procedimientos.modificarNotaCredito 
+	@id_nota_credito = 1, 
+	@fecha_emision = '2024-02-01', 
+	@dni_cliente = '99999999', 
+	@id_factura = '001-01-0001', 
+	@nombre_producto = 'Producto A', 
+	@precio_unitario = 150.00, 
+	@cantidad = 2, 
+	@monto = 300.00; -- Debe devolver 'Error: No existe el cliente.'
+
+--7.2.5 Intentar modificar con factura inexistente
+EXEC Procedimientos.modificarNotaCredito 
+	@id_nota_credito = 1, 
+	@fecha_emision = '2024-02-01', 
+	@dni_cliente = '12345678', 
+	@id_factura = 'FAC999999999', 
+	@nombre_producto = 'Producto A', 
+	@precio_unitario = 150.00, 
+	@cantidad = 2, 
+	@monto = 300.00; -- Debe devolver 'Error: No existe la factura.'
+
+--7.2.6 Intentar modificar con producto inexistente
+EXEC Procedimientos.modificarNotaCredito 
+	@id_nota_credito = 1, 
+	@fecha_emision = '2024-02-01', 
+	@dni_cliente = '12345678', 
+	@id_factura = '001-01-0001', 
+	@nombre_producto = 'Producto Inexistente', 
+	@precio_unitario = 200.00, 
+	@cantidad = 1, 
+	@monto = 200.00; -- Debe devolver 'Error: No existe el producto.'
+
+--7.2.7 Intentar modificar con cantidad negativa
+EXEC Procedimientos.modificarNotaCredito 
+	@id_nota_credito = 1, 
+	@fecha_emision = '2024-02-01', 
+	@dni_cliente = '12345678', 
+	@id_factura = '001-01-0001', 
+	@nombre_producto = 'Producto A', 
+	@precio_unitario = 150.00, 
+	@cantidad = -2, 
+	@monto = 300.00; -- Debe devolver 'Error: La cantidad no puede ser negativa.'
+
+--7.2.8 Intentar modificar con monto negativo
+EXEC Procedimientos.modificarNotaCredito 
+	@id_nota_credito = 1, 
+	@fecha_emision = '2024-02-01', 
+	@dni_cliente = '12345678', 
+	@id_factura = '001-01-0001', 
+	@nombre_producto = 'Producto A', 
+	@precio_unitario = 150.00, 
+	@cantidad = 2, 
+	@monto = -300.00; -- Debe devolver 'Error: El monto no puede ser negativo.'
+
+--7.3 Eliminar
+
+--7.3.1 Eliminar una nota de crédito existente
+EXEC Procedimientos.eliminarNotaCredito 
+	@id_nota_credito = 1; -- Debe eliminar correctamente.
+
+--7.3.2 Intentar eliminar una nota de crédito inexistente
+EXEC Procedimientos.eliminarNotaCredito 
+	@id_nota_credito = 9999; -- Debe devolver 'Error: No existe la Nota de Crédito con ese ID.'
+
+--7.3.3 Intentar eliminar sin especificar ID
+EXEC Procedimientos.eliminarNotaCredito 
+	@id_nota_credito = NULL; -- Debe devolver 'Error: El ID de la Nota de Crédito no puede ser nulo.'
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+--PRUEBA 8 MEDIO DE PAGO
+
+--8.1 Insertar un medio de pago válido
+EXEC Procedimientos.insertarMedioPago 
+	@tipo = 'Credit card'; -- Debe insertar correctamente como 'Tarjeta de credito'.
+
+--8.1.2 Intentar insertar un medio de pago con tipo nulo
+EXEC Procedimientos.insertarMedioPago 
+	@tipo = NULL; -- Debe devolver 'Error: El tipo de medio de pago no puede ser nulo.'
+
+--8.1.3 Intentar insertar un medio de pago con tipo inválido
+EXEC Procedimientos.insertarMedioPago 
+	@tipo = 'Cheque'; -- Debe devolver 'Error: El medio de pago debe ser Credit card, Cash o Ewallet.'
+
+--8.1.4 Intentar insertar un medio de pago que ya existe
+EXEC Procedimientos.insertarMedioPago 
+	@tipo = 'Credit card'; -- Debe devolver 'Error: El medio de pago ya existe.' si ya existe en la base de datos.
+
+--8.1.5 Insertar un medio de pago válido que no existe
+EXEC Procedimientos.insertarMedioPago 
+	@tipo = 'Ewallet'; -- Debe insertar correctamente como 'Billetera Electronica' si no existe ya en la base de datos.
+
+--8.2 Modificacion
+
+--8.2.1 Modificar un medio de pago existente con tipo válido
+EXEC Procedimientos.modificarMedioPago 
+	@id_mp = 1, 
+	@nuevo_tipo = 'Cash'; -- Debe modificar correctamente a 'Efectivo'.
+
+--8.2.3 Intentar modificar un medio de pago con ID nulo
+EXEC Procedimientos.modificarMedioPago 
+	@id_mp = NULL, 
+	@nuevo_tipo = 'Credit card'; -- Debe devolver 'Error: El ID del medio de pago no puede ser nulo.'
+
+--8.2.4 Intentar modificar un medio de pago con tipo nulo
+EXEC Procedimientos.modificarMedioPago 
+	@id_mp = 1, 
+	@nuevo_tipo = NULL; -- Debe devolver 'Error: El tipo de medio de pago no puede ser nulo.'
+
+--8.2.5 Intentar modificar un medio de pago con un ID que no existe
+EXEC Procedimientos.modificarMedioPago 
+	@id_mp = 9999, 
+	@nuevo_tipo = 'Ewallet'; -- Debe devolver 'Error: No existe un medio de pago con ese ID.'
+
+--8.2.6 Intentar modificar un medio de pago con un tipo inválido
+EXEC Procedimientos.modificarMedioPago 
+	@id_mp = 1, 
+	@nuevo_tipo = 'Cheque'; -- Debe devolver 'Error: El medio de pago debe ser Credit card, Cash o Ewallet.'
+
+--8.2.7 Modificar un medio de pago a un tipo válido y único
+EXEC Procedimientos.modificarMedioPago 
+	@id_mp = 1, 
+	@nuevo_tipo = 'Ewallet'; -- Debe modificar correctamente a 'Billetera Electronica' si el tipo no existe ya en la base de datos.
+
+--8.3 Eliminacion
+
+--8.3.1 Eliminar un medio de pago existente por ID
+EXEC Procedimientos.eliminarMedioPago 
+	@id_medio_pago = 2; -- Debe eliminar correctamente el medio de pago con el ID especificado.
+
+--8.3.2 Intentar eliminar un medio de pago con un ID que no existe
+EXEC Procedimientos.eliminarMedioPago 
+	@id_medio_pago = 9999; -- Debe devolver 'Error: No existe un medio de pago con ese ID.'
+
+--8.3.3 Intentar eliminar un medio de pago sin especificar ni ID ni nombre
+EXEC Procedimientos.eliminarMedioPago 
+	@id_medio_pago = NULL, 
+	@nombre_medio_pago = NULL; -- Debe devolver 'Error: Debe especificar un ID o un nombre del medio de pago.'
+
+--8.3.4 Eliminar un medio de pago existente por nombre
+EXEC Procedimientos.eliminarMedioPago 
+	@nombre_medio_pago = 'Efectivo'; -- Debe eliminar correctamente el medio de pago con el nombre especificado.
+
+--8.3.5 Intentar eliminar un medio de pago con un nombre que no existe
+EXEC Procedimientos.eliminarMedioPago 
+	@nombre_medio_pago = 'Cheque'; -- Debe devolver 'Error: No existe un medio de pago con ese nombre.'
+
+--8.3.6 Intentar eliminar un medio de pago proporcionando solo el ID
+EXEC Procedimientos.eliminarMedioPago 
+	@id_medio_pago = 3, 
+	@nombre_medio_pago = NULL; -- Debe eliminar correctamente el medio de pago con el ID especificado, si existe.
+
+--8.3.7 Intentar eliminar un medio de pago proporcionando solo el nombre
+EXEC Procedimientos.eliminarMedioPago 
+	@id_medio_pago = NULL, 
+	@nombre_medio_pago = 'Tarjeta de credito'; -- Debe eliminar correctamente el medio de pago con el nombre especificado, si existe.
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+--PRUEBA 9 PROVEEDOR
+
+--9.1.1 Insertar un proveedor válido
+EXEC Procedimientos.insertarProveedor 
+	@nombre = 'Proveedor A'; -- Debe insertar correctamente el proveedor.
+
+--9.1.2 Intentar insertar un proveedor con nombre nulo
+EXEC Procedimientos.insertarProveedor 
+	@nombre = NULL; -- Debe devolver 'El nombre del proveedor no puede ser nulo.'
+
+--9.1.3 Intentar insertar un proveedor que ya existe
+EXEC Procedimientos.insertarProveedor 
+	@nombre = 'Proveedor A'; -- Debe devolver 'El proveedor ya existe en la tabla Proveedor.' si ya existe.
+
+--9.1.4 Insertar un proveedor válido que no existe
+EXEC Procedimientos.insertarProveedor 
+	@nombre = 'Proveedor B'; -- Debe insertar correctamente el proveedor si no existe en la tabla.
+
+--9.1.5 Intentar insertar un proveedor con un nombre vacío
+EXEC Procedimientos.insertarProveedor 
+	@nombre = ''; -- Debe devolver 'El nombre del proveedor no puede ser nulo.' o un mensaje adecuado para el caso de cadena vacía, dependiendo de la implementación.
+
+--9.2 Modificar
+
+--9.2.1 Modificar un proveedor existente con nombre válido
+EXEC Procedimientos.modificarProveedor 
+	@id_proveedor = 1, 
+	@nuevo_nombre = 'Proveedor Actualizado'; -- Debe modificar correctamente el nombre del proveedor.
+
+--9.2.2 Intentar modificar un proveedor con nombre nulo
+EXEC Procedimientos.modificarProveedor 
+	@id_proveedor = 1, 
+	@nuevo_nombre = NULL; -- Debe devolver 'El nombre del proveedor no puede ser nulo.'
+
+--9.2.3 Intentar modificar un proveedor que no existe
+EXEC Procedimientos.modificarProveedor 
+	@id_proveedor = 9999, 
+	@nuevo_nombre = 'Nuevo Proveedor'; -- Debe devolver 'El proveedor no existe en la base de datos.'
+
+--9.2.4 Modificar un proveedor con un nuevo nombre válido que no existe en la base de datos
+EXEC Procedimientos.modificarProveedor 
+	@id_proveedor = 1, 
+	@nuevo_nombre = 'Proveedor B'; -- Debe modificar correctamente el proveedor si no existe otro proveedor con ese nombre.
+
+--9.3 Eliminacion
+
+--9.3.1 Eliminar un proveedor existente
+EXEC Procedimientos.eliminarProveedor 
+	@id_proveedor = 1; -- Debe eliminar correctamente el proveedor con el ID especificado.
+
+--9.3.2 Intentar eliminar un proveedor que no existe
+EXEC Procedimientos.eliminarProveedor 
+	@id_proveedor = 9999; -- Debe devolver 'El proveedor no existe en la base de datos.'
+
+--9.3.3 Intentar eliminar un proveedor proporcionando un ID nulo
+EXEC Procedimientos.eliminarProveedor 
+	@id_proveedor = NULL; -- Debe devolver 'El proveedor no existe en la base de datos.' o un mensaje adecuado para el caso de ID nulo.
+
+
+	-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+--PRUEBA 10 PRODUCTO_SOLICITADO
+--DATOS DE PRUEBA
+
+-- Inserción en la tabla Sucursal
+INSERT INTO ddbba.Sucursal (localidad, direccion, horario, telefono)
+VALUES ('Centro', 'Av. Libertador 1000', '9:00 - 18:00', '555-1234');
+
+-- Inserción en la tabla Empleado
+INSERT INTO ddbba.Empleado (id_empleado, nombre, apellido, dni, direccion, cuil, email_personal, email_empresarial, turno, cargo, id_sucursal)
+VALUES (1, 'Juan', 'Perez', 12345678, 'Av. Siempre Viva 123', '20-12345678-9', 'juan.perez@mail.com', 'juan.perez@empresa.com', 'Mañana', 'Vendedor', 1);
+
+-- Inserción en la tabla Proveedor
+INSERT INTO ddbba.Proveedor (nombre)
+VALUES ('Proveedor A');
+
+-- Inserción en la tabla Producto
+INSERT INTO ddbba.Producto (nombre_producto, linea, precio_unitario, precio_referencia, unidad, cantidadPorUnidad, moneda, fecha)
+VALUES ('Laptop', 'Electrónica', 1200.00, 1300.00, 'Unidad', '1', 'USD', '2025-03-01');
+
+-- Inserción en la tabla ProveedorProvee
+INSERT INTO ddbba.ProveedorProvee (id_proveedor, id_producto)
+VALUES (1, 1);
+
+-- Inserción en la tabla Cliente
+INSERT INTO ddbba.Cliente (dni_cliente, genero, tipo, apellido, nombre, fecha_nac)
+VALUES ('12345678', 'Masculino', 'Particular', 'Lopez', 'Carlos', '1990-05-10');
+
+-- Inserción en la tabla MedioPago
+INSERT INTO ddbba.MedioPago (tipo)
+VALUES ('Efectivo');
+
+-- Inserción en la tabla Pedido
+INSERT INTO ddbba.Pedido (id_factura, fecha_pedido, hora_pedido, dni_cliente, id_mp, iden_pago, id_empleado, id_sucursal, tipo_factura, estado_factura)
+VALUES ('123-45-6789', '2025-03-04', '10:30', '12345678', 1, 'Transferencia', 1, 1, 'A', 'Pagado');
+
+-- Inserción en la tabla NotaCredito
+INSERT INTO ddbba.NotaCredito (fecha_emision, dni_cliente, id_factura, nombre_producto, precio_unitario, cantidad, monto, cantidadADevolver, motivo)
+VALUES ('2025-03-05', '12345678', '123-45-6789', 'Laptop', 1200.00, 1, 1200.00, 1, 'Devolución parcial');
+
+--10.1.1 Insertar un producto solicitado con datos válidos
+EXEC Procedimientos.insertarProductoSolicitado 
+	@id_factura = '123-45-6789', 
+	@id_producto = 1, 
+	@cantidad = 10; -- Debe insertar correctamente el producto solicitado.
+
+--10.1.2 Intentar insertar un producto solicitado con id_factura nulo
+EXEC Procedimientos.insertarProductoSolicitado 
+	@id_factura = NULL, 
+	@id_producto = 1, 
+	@cantidad = 10; -- Debe devolver 'El id_factura no puede ser nulo.'
+
+--10.1.3 Intentar insertar un producto solicitado con id_producto nulo
+EXEC Procedimientos.insertarProductoSolicitado 
+	@id_factura = 'F12345678901', 
+	@id_producto = NULL, 
+	@cantidad = 10; -- Debe devolver 'El id_producto no puede ser nulo.'
+
+--10.1.4 Intentar insertar un producto solicitado con cantidad nula
+EXEC Procedimientos.insertarProductoSolicitado 
+	@id_factura = 'F12345678901', 
+	@id_producto = 1, 
+	@cantidad = NULL; -- Debe devolver 'La cantidad no puede ser nula.'
+
+--10.1.5 Intentar insertar un producto solicitado con datos duplicados
+EXEC Procedimientos.insertarProductoSolicitado 
+	@id_factura = '123-45-6789', 
+	@id_producto = 1, 
+	@cantidad = 10; -- Debe devolver 'El pedido ya tiene esos datos' si ya existe una entrada con los mismos valores.
+
+--10.1.6 Intentar insertar un producto solicitado con un producto que no existe
+EXEC Procedimientos.insertarProductoSolicitado 
+	@id_factura = 'F12345678901', 
+	@id_producto = 9999, 
+	@cantidad = 10; -- Debe devolver 'El producto no existe.'
+
+--10.1.7 Intentar insertar un producto solicitado con un pedido que no existe
+EXEC Procedimientos.insertarProductoSolicitado 
+	@id_factura = 'F99999999999', 
+	@id_producto = 1, 
+	@cantidad = 10; -- Debe devolver 'El pedido no existe.'
+
+--10.1.8 Intentar insertar un producto solicitado con cantidad menor o igual a cero
+EXEC Procedimientos.insertarProductoSolicitado 
+	@id_factura = '123-45-6789', 
+	@id_producto = 1, 
+	@cantidad = 0; -- Debe devolver 'La cantidad debe ser mayor a cero.'
+
+--10.1.9 Insertar un producto solicitado con una cantidad válida mayor a cero
+EXEC Procedimientos.insertarProductoSolicitado 
+	@id_factura = 'F12345678901', 
+	@id_producto = 2, 
+	@cantidad = 5; -- Debe insertar correctamente el producto solicitado si todo es válido.
+
+--10.2 Modificacion
+
+-- 10.2.1: Prueba de modificación válida
+EXEC Procedimientos.modificarProductoSolicitado 
+    @id_factura = '123-45-6789', 
+    @id_producto = 1, 
+    @cantidad = 3;
+-- Esperado: "Valores modificados correctamente"
+
+-- 10.2.2: Prueba de cantidad inválida (menor a cero)
+EXEC Procedimientos.modificarProductoSolicitado 
+    @id_factura = '123-45-6789', 
+    @id_producto = 1, 
+    @cantidad = -1;
+-- Esperado: "La cantidad debe ser mayor a cero"
+
+-- 10.2.3: Prueba de producto no existente en la factura
+EXEC Procedimientos.modificarProductoSolicitado 
+    @id_factura = '123-45-6789', 
+    @id_producto = 999,  -- Producto que no existe
+    @cantidad = 3;
+-- Esperado: "El producto solicitado no existe en la factura"
+
+-- 10.2.4: Prueba de factura no existente
+EXEC Procedimientos.modificarProductoSolicitado 
+    @id_factura = '999-99-9999',  -- Factura que no existe
+    @id_producto = 1, 
+    @cantidad = 3;
+-- Esperado: "El pedido no existe"
+
+-- 10.2.5: Prueba de producto no existente
+EXEC Procedimientos.modificarProductoSolicitado 
+    @id_factura = '123-45-6789', 
+    @id_producto = 999,  -- Producto que no existe
+    @cantidad = 3;
+-- Esperado: "El producto no existe"
+
+--10.3 Eliminacion
+
+-- 10.3.1: Prueba de eliminación válida
+EXEC Procedimientos.eliminarProductoSolicitado 
+    @id_factura = '123-45-6789', 
+    @id_producto = 1;
+-- Esperado: "Producto solicitado eliminado correctamente"
+
+-- 10.3.2: Prueba de producto no existente en la factura
+EXEC Procedimientos.eliminarProductoSolicitado 
+    @id_factura = '123-45-6789', 
+    @id_producto = 999;  -- Producto que no existe en la factura
+-- Esperado: "El producto solicitado no existe en la factura"
+
+-- 10.3.3: Prueba de factura no existente
+EXEC Procedimientos.eliminarProductoSolicitado 
+    @id_factura = '999-99-9999',  -- Factura que no existe
+    @id_producto = 1;
+-- Esperado: "El pedido no existe"
+
+-- 10.3.4: Prueba de producto no existente
+EXEC Procedimientos.eliminarProductoSolicitado 
+    @id_factura = '123-45-6789', 
+    @id_producto = 999;  -- Producto que no existe
+-- Esperado: "El producto no existe"
+
+-- 10.3.5: Prueba de id_factura nulo
+EXEC Procedimientos.eliminarProductoSolicitado 
+    @id_factura = NULL, 
+    @id_producto = 1;
+-- Esperado: "El id_factura no puede ser nulo"
+
+-- 10.3.6: Prueba de id_producto nulo
+EXEC Procedimientos.eliminarProductoSolicitado 
+    @id_factura = '123-45-6789', 
+    @id_producto = NULL;
+-- Esperado: "El id_producto no puede ser nulo"
 
 
 
---prueba para SP insertarCliente, Ejecute los siguientes juegos de prueba y  luego el SELECT para ver los resultados
--- datos invalidos
-EXEC ddbba.insertarCliente
-    90000,'Mal','Norma','Gomez','Pedro','2030-11-12'; -- debe dar error el genero
-EXEC ddbba.insertarCliente
-    90000,'Male','Norma','Gomez','Pedro','2030-11-12'; -- debe dar erro el tipo de cliente
-EXEC ddbba.insertarCliente
-    90000,'Male','Normal','Gomez','Pedro','2030-11-12'; -- debe dar error la fecha
-EXEC ddbba.insertarCliente
-    90000,'Male','Normal','Gomez','Pedro','2019-11-12'; --de insertar correctamente el cliente
-EXEC ddbba.insertarCliente
-    90000,'Male','Normal','Gomez','Pedro','2019-11-12'; --debe decir que el id ya existe (error del sistema)
-SELECT * FROM ddbba.Cliente WHERE id_cliente = 90000 --observe que el cliente fue agregado exitosamente
 
--- prueba para SP insertarMedioPago, Ejecute los siguientes juegos de prueba y  luego el SELECT para ver los resultados
--- datos invalidos
-EXEC ddbba.InsertarMedioPago
-	'' ;--debe dar error el tipo
-EXEC ddbba.InsertarMedioPago
-	'Cash' ;--debe insertarse el medio de pago correctamente
-EXEC ddbba.InsertarMedioPago
-	'Cash' ;--debe decir que ya existe
-SELECT * FROM ddbba.MedioPago WHERE tipo = 'Efectivo' --observe que el medio de pago fue agregado exitosamente
-
-
--- prueba para SP insertarVenta, Ejecute los siguientes juegos de prueba y  luego el SELECT para ver los resultados
--- datos invalidos
-EXEC ddbba.insertarVenta
-	100000,10000,10000; --debe dar error el id de pedido
-EXEC ddbba.insertarVenta
-	1,100000,1111110; --debe dar error el id de sucursal
-EXEC ddbba.insertarVenta
-	1,1,0; --debe dar error el empleado
-EXEC ddbba.insertarVenta
-	1,1,900000; --debe insertarse correctamente los datos
-SELECT * FROM ddbba.Venta WHERE id_pedido = 1 AND id_sucursal = 1 AND id_empleado = 900000; --observe que la venta fue agregado exitosamente
-
-
--- prueba para SP insertarTiene, Ejecute los siguientes juegos de prueba y  luego el SELECT para ver los resultados
--- datos invalidos
-EXEC ddbba.insertarTiene
-	0,0,0; --debe dar error el id de producto
-EXEC ddbba.insertarTiene
-	0,1,0; --debe dar error el id de pedido
-EXEC ddbba.insertarTiene
-	1,1,0; --debe dar error la cantidad
-EXEC ddbba.insertarTiene
-	1,1,10; --debe insertarse correctamente los datos
-SELECT * FROM ddbba.Tiene WHERE id_pedido = 1 AND id_producto = 1 ;--observe que los datos fueron agregado exitosamente
-
-
--- prueba para SP insertarFactura, Ejecute los siguientes juegos de prueba y  luego el SELECT para ver los resultados
--- datos invalidos
-EXEC ddbba.insertarFactura
-	'1','Z',10,'2030-01-01',''; --debe dar error en el id
-EXEC ddbba.insertarFactura
-	'900-00-0000','Z',10,'2030-01-01',''; --debe dar error tipo
-EXEC ddbba.insertarFactura
-	'900-00-0000','A',10,'2030-01-01',''; --debe dar error en el pedido
-EXEC ddbba.insertarFactura
-	'900-00-0000','A',1,'2030-01-01',''; --debe dar error la fecha
-EXEC ddbba.insertarFactura
-	'900-00-0000','A',1,'2030-01-01',''; --debe dar error el estado
-EXEC ddbba.insertarFactura
-	'900-00-0000','A',1,'2020-01-01','Pagado'; --debe insertarse la factura correctamente
-EXEC ddbba.insertarFactura
-	'900-00-0000','A',1,'2020-01-01','Pagado'; --debe dar error de existencia
-SELECT * FROM ddbba.Factura WHERE id_factura = '900-00-0000' --observe que la factura fue agregado exitosamente
-
-
---Luego de ejecutar los SP, emilinar los datos de prueba de las tablas DE ABAJO HACIA ARRIBA
-DELETE FROM ddbba.Factura WHERE id_factura= '900-00-0000' ;
-DELETE FROM ddbba.Tiene WHERE id_pedido = 1 AND id_producto = 1;
-DELETE FROM ddbba.Venta WHERE id_pedido = 1 AND id_sucursal = 1 AND id_empleado = 900000; --observe que el cliente fue agregado exitosamente
-DELETE FROM ddbba.Pedido WHERE fecha_pedido = '2020-01-02' and hora_pedido='00:00' and id_cliente=90000 and id_mp=1;
-DELETE FROM ddbba.MedioPago WHERE tipo = 'Efectivo' 
-DELETE FROM ddbba.Cliente WHERE id_cliente = 90000;
-DELETE FROM ddbba.Provee WHERE id_producto = 1 AND id_proveedor = 1;
-DELETE FROM ddbba.Producto WHERE nombre_producto = 'perro';
-DELETE FROM ddbba.Proveedor WHERE nombre = 'Peperino';
-DELETE FROM ddbba.Empleado WHERE id_empleado = 900000;
-DELETE FROM ddbba.Sucursal WHERE localidad='Ramos Mejia' and direccion='Av Rivadavia 2343';
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 
 
---REPORTES
+--PRUEBA DE REPORTES
+
 --REPORTE Mensual: ingresando un mes y año determinado mostrar el total facturado por días de la semana, incluyendo sábado y domingo.
-EXEC Reporte_FacturacionMensual_XML 00,2019 --debe dar error en el mes
-EXEC Reporte_FacturacionMensual_XML 01,2026 --debe dar error en el anio
-EXEC Reporte_FacturacionMensual_XML 01,2019 --debe hacer un reporte correcto
+
+-- Prueba 1: Consultar facturación para el mes 00 y año 2019 (debe dar error en el mes)
+	EXEC Rep.Reporte_FacturacionMensual_XML 00, 2019;
+-- Prueba 2: Consultar facturación para el mes 01 y año 2026 (debe dar error en el año)
+	EXEC Rep.Reporte_FacturacionMensual_XML 01, 2026;
+-- Prueba 3: Consultar facturación para el mes 01 y año 2019 (debe hacer un reporte correcto)
+	EXEC Rep.Reporte_FacturacionMensual_XML 01, 2019;
+
 
 --REPORTE Trimestral: mostrar el total facturado por turnos de trabajo por mes.
-EXEC ObtenerFacturacionPorTrimestreXML @Anio = 2029, @Trimestre = 1; --debe dar error el anio
-EXEC ObtenerFacturacionPorTrimestreXML @Anio = 2019, @Trimestre = 0; --debe dar error el trimestre
-EXEC ObtenerFacturacionPorTrimestreXML @Anio = 2019, @Trimestre = 1; --debe hacer un reporte correcto
+
+-- Prueba 1: Consultar facturación para el año 2026 y trimestre 0 (debe dar error en el año)
+	EXEC Rep.ObtenerFacturacionPorTrimestreXML 2026, 1;
+-- Prueba 2: Consultar facturación para el año 2025 y trimestre 5 (debe dar error en el trimestre)
+	EXEC Rep.ObtenerFacturacionPorTrimestreXML 2025, 5;
+-- Prueba 3: Consultar facturación para el año 2020 y trimestre 3 (debe dar un reporte correcto para el tercer trimestre de 2020)
+	EXEC Rep.ObtenerFacturacionPorTrimestreXML 2020, 3;
+
 
 --REPORTE Por rango de fechas: ingresando un rango de fechas a demanda, debe poder mostrar la cantidad de productos vendidos en ese rango, ordenado de mayor a menor.
-EXEC Reporte_ProductosVendidos_XML '2019-01-01', '2010-01-01' --debe dar error en las fechas de inicio/fin
-EXEC Reporte_ProductosVendidos_XML '2019-01-01', '2020-01-01'  --debe hacer un reporte correcto
+
+-- Prueba 1: Consultar reporte con fecha de fin antes de la fecha de inicio (debe dar error)
+	EXEC Rep.Reporte_ProductosVendidos_XML '2025-03-01', '2025-02-01';
+-- Prueba 2: Consultar reporte con fechas válidas (debe devolver el reporte de productos vendidos entre estas fechas)
+	EXEC Rep.Reporte_ProductosVendidos_XML '2025-01-01', '2025-03-01';
+-- Prueba 3: Consultar reporte con una fecha de inicio igual a la fecha de fin (debe dar el reporte para ese único día)
+	EXEC Rep.Reporte_ProductosVendidos_XML '2025-02-01', '2025-02-01';
+-- Prueba 4: Consultar reporte con fechas en el futuro (debe devolver un reporte vacío si no hay ventas en ese rango de fechas)
+	EXEC Rep.Reporte_ProductosVendidos_XML '2026-01-01', '2026-03-01';
+-- Prueba 5: Consultar reporte con fechas amplias (debe devolver el reporte para todas las ventas entre estas fechas)
+	EXEC Rep.Reporte_ProductosVendidos_XML '2020-01-01', '2025-12-31';
+
 
 --REPORTE Por rango de fechas: ingresando un rango de fechas a demanda, debe poder mostrar la cantidad de productos vendidos en ese rango por sucursal, ordenado de mayor a menor.
-EXEC ObtenerVentasPorRangoFechasXML @FechaInicio = '2019-01-01', @FechaFin = '2009-02-28';--debe dar error en las fechas de inicio/fin
-EXEC ObtenerVentasPorRangoFechasXML @FechaInicio = '2019-01-01', @FechaFin = '2019-02-28';--debe hacer un reporte correcto
+
+-- Prueba 1: Consultar reporte con fecha de fin antes de la fecha de inicio (debe dar error)
+	EXEC Rep.ObtenerVentasPorRangoFechasXML '2025-03-01', '2025-02-01';
+-- Prueba 2: Consultar reporte con fechas válidas (debe devolver el reporte de ventas entre estas fechas)
+	EXEC Rep.ObtenerVentasPorRangoFechasXML '2025-01-01', '2025-03-01';
+-- Prueba 3: Consultar reporte con fechas iguales (debe dar el reporte de ventas para ese único día)
+	EXEC Rep.ObtenerVentasPorRangoFechasXML '2025-02-01', '2025-02-01';
+-- Prueba 4: Consultar reporte con fechas en el futuro (debe devolver un reporte vacío si no hay ventas en ese rango de fechas)
+	EXEC Rep.ObtenerVentasPorRangoFechasXML '2026-01-01', '2026-03-01';
+-- Prueba 5: Consultar reporte con fechas amplias (debe devolver el reporte para todas las ventas entre estas fechas)
+	EXEC Rep.ObtenerVentasPorRangoFechasXML '2020-01-01', '2025-12-31';
+
 
 --REPORTE Mostrar los 5 productos más vendidos en un mes, por semana
-EXEC ObtenerTopProductosPorSemanaXML 00,2019 --debe dar error en el mes
-EXEC ObtenerTopProductosPorSemanaXML 01,2026 --debe dar error en el anio
-EXEC ObtenerTopProductosPorSemanaXML 01,2019 --debe hacer un reporte correcto
+
+-- Prueba 1: Consultar reporte con un mes inválido (debe dar error por mes inválido)
+	EXEC Rep.ObtenerTopProductosPorSemanaXML 13, 2025;
+-- Prueba 2: Consultar reporte con un año inválido (debe dar error por año inválido)
+	EXEC Rep.ObtenerTopProductosPorSemanaXML 5, 2100;
+-- Prueba 3: Consultar reporte con un mes y año válidos (debe devolver los productos más vendidos por semana)
+	EXEC Rep.ObtenerTopProductosPorSemanaXML 3, 2025;
+
 
 --REPORTE Mostrar los 5 productos menos vendidos en el mes. 
-EXEC ObtenerMenoresProductosDelMesXML 00,2019 --debe dar error en el mes
-EXEC ObtenerMenoresProductosDelMesXML 01,2026 --debe dar error en el anio
-EXEC ObtenerMenoresProductosDelMesXML 01,2019 --debe hacer un reporte correcto
+
+-- Prueba 1: Consultar reporte con un mes inválido (debe dar error por mes inválido)
+	EXEC Rep.ObtenerMenoresProductosDelMesXML 13, 2025;
+-- Prueba 2: Consultar reporte con un año inválido (debe dar error por año inválido)
+	EXEC Rep.ObtenerMenoresProductosDelMesXML 5, 2100;
+-- Prueba 3: Consultar reporte con un mes y año válidos (debe devolver los productos menos vendidos en el mes)
+	EXEC Rep.ObtenerMenoresProductosDelMesXML 3, 2025;
+
 
 --REPORTE Mostrar total acumulado de ventas (o sea también mostrar el detalle) para una fecha y sucursal particulares 
-EXEC ObtenerVentasPorFechaYSucursalXML @Fecha = '2019-02-15', @SucursalID = 500; --debe dar error la sucursal
-EXEC ObtenerVentasPorFechaYSucursalXML @Fecha = '2019-02-15', @SucursalID = 2;
+
+-- Prueba 1: Consultar reporte con una fecha y sucursal válidas (debe devolver el detalle y el total acumulado de ventas)
+	EXEC Rep.ObtenerVentasPorFechaYSucursalXML '2025-03-01', 1;
+-- Prueba 2: Consultar reporte con una sucursal que no existe (debe devolver "Sucursal no existe")
+	EXEC Rep.ObtenerVentasPorFechaYSucursalXML '2025-03-01', 9999;
+-- Prueba 3: Consultar reporte con una fecha sin ventas en la sucursal (debe devolver un reporte vacío o sin ventas)
+	EXEC Rep.ObtenerVentasPorFechaYSucursalXML '2026-01-01', 2;
+
 
 --REPORTE Mensual: ingresando un mes y año determinado mostrar el vendedor de mayor monto facturado por sucursal. 
-EXEC Reporte_VendedorTopPorSucursal_XML 00,2019 --debe dar error en el mes
-EXEC Reporte_VendedorTopPorSucursal_XML 01,2026 --debe dar error en el anio
-EXEC Reporte_VendedorTopPorSucursal_XML 01,2019 --debe hacer un reporte correcto
 
---ENTREGA N5
---prueba para el SP GenerarNotaCredito
-EXEC GenerarNotaCredito '102-06-200', 257026 	--debe dar error el id_factura
-EXEC GenerarNotaCredito '102-06-2002', 25702	--debe dar error el id_empleado
---buscar una factura no pagada y luego insertar su id en la ejecucion de abajo
-SELECT * FROM ddbba.Factura
-EXEC GenerarNotaCredito '', 257026	--debe decir que la factura debe estar pagada
---buscar un empelado que no sea supervisor y luego insertar su id en la ejecucion de abajo
-SELECT * FROM ddbba.Empleado
-EXEC GenerarNotaCredito '', insertaraqui	--debe decir que la factura debe estar pagada
---buscar un empelado que  sea supervisor y una factura que este pagada  y luego insertar los id aqui abajo
-EXEC GenerarNotaCredito '', insertaraqui 	--debe generar una nota de credito valida
+-- Prueba 1: Consultar reporte con un mes y año válidos (debe devolver el top vendedor por sucursal)
+	EXEC Rep.Reporte_VendedorTopPorSucursal_XML 01, 2025;
+-- Prueba 2: Consultar reporte con un mes inválido (debe devolver "Mes inválido")
+	EXEC Rep.Reporte_VendedorTopPorSucursal_XML 13, 2025;
+-- Prueba 3: Consultar reporte con un año inválido (debe devolver "Año inválido")
+	EXEC Rep.Reporte_VendedorTopPorSucursal_XML 01, 1799;
+-- Prueba 4: Consultar reporte con un mes y año válidos donde no hay ventas (debe devolver un reporte vacío si no hay vendedores con ventas)
+	EXEC Rep.Reporte_VendedorTopPorSucursal_XML 02, 2025;
+
+
 
 

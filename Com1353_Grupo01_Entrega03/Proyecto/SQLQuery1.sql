@@ -116,7 +116,7 @@ go
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Cliente') AND type = N'U')
 	BEGIN
 		CREATE TABLE ddbba.Cliente (
-			dni char(8) PRIMARY KEY,
+			dni_cliente char(8) PRIMARY KEY CHECK (LEN(dni_cliente) = 8 ),
 			genero VARCHAR(10),
 			tipo VARCHAR(10),
 			apellido VARCHAR(100),
@@ -158,7 +158,7 @@ IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G0
 			id_sucursal INT,
             tipo_factura CHAR(1) CHECK (tipo_factura IN ('A', 'B', 'C')),
 			estado_factura VARCHAR(10) CHECK (estado_factura IN ('Pagado', 'NoPagado')),
-			CONSTRAINT FKPedido1 FOREIGN KEY (dni_cliente) REFERENCES ddbba.Cliente(dni),
+			CONSTRAINT FKPedido1 FOREIGN KEY (dni_cliente) REFERENCES ddbba.Cliente(dni_cliente),
 			CONSTRAINT FKPedido2 FOREIGN KEY (id_mp) REFERENCES ddbba.MedioPago (id_mp),
 			CONSTRAINT FKPedido3 FOREIGN KEY (id_empleado) REFERENCES ddbba.Empleado (id_empleado),
 			CONSTRAINT FKPedido4 FOREIGN KEY (id_sucursal) REFERENCES ddbba.Sucursal (id_sucursal)
@@ -204,7 +204,7 @@ BEGIN
 		cantidadADevolver int,
 		motivo Varchar(255)
 	    CONSTRAINT FKNotaCredito2 FOREIGN KEY (id_factura) REFERENCES ddbba.Pedido(id_factura),
-	    CONSTRAINT FKNotaCredito3 FOREIGN KEY (dni_cliente) REFERENCES ddbba.Cliente(dni)
+	    CONSTRAINT FKNotaCredito3 FOREIGN KEY (dni_cliente) REFERENCES ddbba.Cliente(dni_cliente)
     );
     PRINT 'Tabla NotaCredito creada correctamente.';
 END;
@@ -219,60 +219,182 @@ IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'Procedimientos')
 	END;
 go
 
+
+-- SP PARA INSERTAR CLIENTE-------------------------------------------------------
 --creacion de los Store Procedure DE INSERCION de los datos a las tablas anteriores
--- SP PARA CLIENTE
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarCliente')
 BEGIN
-	DROP PROCEDURE Procedimientos.insertarCliente ;
+    DROP PROCEDURE Procedimientos.insertarCliente;
 END;
-go
+GO
 CREATE PROCEDURE Procedimientos.insertarCliente
-	@dni char(8),
-	@genero VARCHAR(50),
-	@tipo VARCHAR(10),
-	@apellido VARCHAR(50),
-	@nombre VARCHAR(50),
-	@fnac DATE 
+    @dni CHAR(8),
+    @genero VARCHAR(50),
+    @tipo VARCHAR(10),
+    @apellido VARCHAR(50),
+    @nombre VARCHAR(50),
+    @fnac DATE
 AS
 BEGIN
+    -- Validación de que ningún campo sea NULL
+    IF @dni IS NULL OR @genero IS NULL OR @tipo IS NULL OR 
+       @apellido IS NULL OR @nombre IS NULL OR @fnac IS NULL
+    BEGIN
+        PRINT 'Error: Ningún campo puede ser NULL';
+        RETURN;
+    END;
 
-	--validacion de que el cliente no se haya insertado
-	IF EXISTS (SELECT 1 FROM ddbba.Cliente WHERE @dni=dni)
-	BEGIN
-		PRINT 'Cliente ya existente';
-		RETURN;
-	END;
-		--validacion de que el dni sea valido
-	IF  LEN(@dni)<>8 
-	BEGIN
-		PRINT 'Error. el dni debe ser de 8 digitos';
-		RETURN;
-	END;
-	-- Validación del que el genero sea female o male
-	IF (@genero NOT IN ('Female', 'Male'))
-	BEGIN
-		PRINT 'Error. El género debe ser "Female" o "Male".';
-		RETURN;
-	END;
-	-- Validación del que el tipo de cliente sea Normal o Member
-	IF (@tipo NOT IN ('Normal', 'Member'))
-	BEGIN
-		PRINT 'Error. El tipo de cliente debe ser "Normal" o "Member".';
-		RETURN
-	END;
-	-- Validación de que la fecha de nacimiento no sea futura
-	IF (@fnac > GETDATE())
-	BEGIN
-		PRINT 'La fecha de alta no puede ser futura';
-		RETURN;
-	END;
+    -- Validación de que el cliente no se haya insertado
+    IF EXISTS (SELECT 1 FROM ddbba.Cliente WHERE dni_cliente = @dni)
+    BEGIN
+        PRINT 'Cliente ya existente';
+        RETURN;
+    END;
 
-    --inserta datos en la tabla 
-	INSERT INTO ddbba.Cliente (dni,genero, tipo, apellido,nombre,fecha_nac)
-	VALUES (@dni,@genero,@tipo,@apellido,@nombre,@fnac);
-	PRINT 'Cliente insertado correctamente';
+    -- Validación de que el DNI tenga 8 dígitos
+    IF LEN(@dni) <> 8 
+    BEGIN
+        PRINT 'Error: El DNI debe ser de 8 dígitos';
+        RETURN;
+    END;
+
+    -- Validación de género
+    IF @genero NOT IN ('Female', 'Male')
+    BEGIN
+        PRINT 'Error: El género debe ser "Female" o "Male"';
+        RETURN;
+    END;
+
+    -- Validación del tipo de cliente
+    IF @tipo NOT IN ('Normal', 'Member')
+    BEGIN
+        PRINT 'Error: El tipo de cliente debe ser "Normal" o "Member"';
+        RETURN;
+    END;
+
+    -- Validación de que la fecha de nacimiento no sea futura
+    IF @fnac > GETDATE()
+    BEGIN
+        PRINT 'Error: La fecha de nacimiento no puede ser futura';
+        RETURN;
+    END;
+
+    -- Insertar el cliente
+    INSERT INTO ddbba.Cliente (dni_cliente, genero, tipo, apellido, nombre, fecha_nac)
+    VALUES (@dni, @genero, @tipo, @apellido, @nombre, @fnac);
+    
+    PRINT 'Cliente insertado correctamente';
 END;
-go
+GO
+
+-- SP PARA MODIFICAR CLIENTE
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'modificarCliente')
+BEGIN
+    DROP PROCEDURE Procedimientos.modificarCliente;
+END;
+GO
+CREATE PROCEDURE Procedimientos.modificarCliente
+    @dni CHAR(8),
+    @genero VARCHAR(50),
+    @tipo VARCHAR(10),
+    @apellido VARCHAR(50),
+    @nombre VARCHAR(50),
+    @fnac DATE
+AS
+BEGIN
+    -- Validación de que ningún campo sea NULL
+    IF @dni IS NULL OR @genero IS NULL OR @tipo IS NULL OR 
+       @apellido IS NULL OR @nombre IS NULL OR @fnac IS NULL
+    BEGIN
+        PRINT 'Error: Ningún campo puede ser NULL';
+        RETURN;
+    END;
+
+    -- Verificar si el cliente existe
+    IF NOT EXISTS (SELECT 1 FROM ddbba.Cliente WHERE dni_cliente = @dni)
+    BEGIN
+        PRINT 'Error: Cliente no encontrado';
+        RETURN;
+    END;
+
+    -- Validación de que el DNI tenga 8 dígitos
+    IF LEN(@dni) <> 8 
+    BEGIN
+        PRINT 'Error: El DNI debe ser de 8 dígitos';
+        RETURN;
+    END;
+
+    -- Validación de género
+    IF @genero NOT IN ('Female', 'Male')
+    BEGIN
+        PRINT 'Error: El género debe ser "Female" o "Male"';
+        RETURN;
+    END;
+
+    -- Validación del tipo de cliente
+    IF @tipo NOT IN ('Normal', 'Member')
+    BEGIN
+        PRINT 'Error: El tipo de cliente debe ser "Normal" o "Member"';
+        RETURN;
+    END;
+
+    -- Validación de que la fecha de nacimiento no sea futura
+    IF @fnac > GETDATE()
+    BEGIN
+        PRINT 'Error: La fecha de nacimiento no puede ser futura';
+        RETURN;
+    END;
+
+    -- Modificar el cliente
+    UPDATE ddbba.Cliente
+    SET genero = @genero,
+        tipo = @tipo,
+        apellido = @apellido,
+        nombre = @nombre,
+        fecha_nac = @fnac
+    WHERE dni_cliente = @dni;
+
+    PRINT 'Cliente modificado correctamente';
+END;
+GO
+-- SP PARA ELIMINAR CLIENTE
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'eliminarCliente')
+BEGIN
+    DROP PROCEDURE Procedimientos.eliminarCliente;
+END;
+GO
+CREATE PROCEDURE Procedimientos.eliminarCliente
+    @dni CHAR(8)
+AS
+BEGIN
+    -- Validación de que el DNI no sea NULL
+    IF @dni IS NULL
+    BEGIN
+        PRINT 'Error: El DNI no puede ser NULL';
+        RETURN;
+    END;
+
+    -- Validación de que el DNI tenga 8 dígitos
+    IF LEN(@dni) <> 8
+    BEGIN
+        PRINT 'Error: El DNI debe tener 8 dígitos';
+        RETURN;
+    END;
+
+    -- Verificar si el cliente existe
+    IF NOT EXISTS (SELECT 1 FROM ddbba.Cliente WHERE dni_cliente = @dni)
+    BEGIN
+        PRINT 'Error: Cliente no encontrado';
+        RETURN;
+    END;
+
+    -- Eliminar el cliente
+    DELETE FROM ddbba.Cliente WHERE dni_cliente = @dni;
+    
+    PRINT 'Cliente eliminado correctamente';
+END;
+GO
+
 
 -- SP PARA EMPLEADO------------------------------------------------------------------
 --insercion
@@ -451,7 +573,7 @@ BEGIN
 END;
 GO
 
--- SP PARA  PEDIDO
+-- SP PARA  PEDIDO----------------------------------------------------------------
 --insercion
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarPedido')
 BEGIN
@@ -662,7 +784,7 @@ BEGIN
 END;
 GO
 
---SP PARA PRODUCTO
+--SP PARA PRODUCTO---------------------------------------------------------------------------
 --insercion
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarProducto')
 BEGIN
@@ -809,8 +931,8 @@ BEGIN
 END;
 GO
 
---SP PARA PROVEEDOR_PROVEE
---insercion
+--SP PARA PROVEEDOR_PROVEE--------------------------------------------------------------------
+--insercion-
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarProveedor_provee')
 BEGIN
 	DROP PROCEDURE Procedimientos.insertarProveedorProvee;
@@ -846,6 +968,7 @@ END;
 go
 --modificacion
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'modificarProveedorProvee')
+
 BEGIN
     DROP PROCEDURE Procedimientos.modificarProveedorProvee;
 END;
@@ -913,45 +1036,421 @@ BEGIN
 END;
 GO
 
---SP PARA MEDIO DE PAGO
-IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarMedioPago')
+--SP PARA INSERTAR NOTA CREDITO--------------------------------------------------------------
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarNotaCredito')
 BEGIN
-	DROP PROCEDURE Procedimientos.insertarMedioPago ;
+    DROP PROCEDURE Procedimientos.insertarNotaCredito;
 END;
-go
-CREATE PROCEDURE Procedimientos.insertarMedioPago
-		@tipo VARCHAR(50)
+GO
+CREATE PROCEDURE Procedimientos.insertarNotaCredito(
+	@fecha_emision DATETIME,
+	@dni_cliente CHAR(8),
+	@id_factura CHAR(12),
+	@nombre_producto VARCHAR(100),
+	@precio_unitario DECIMAL(10,2),
+	@cantidad INT,
+	@monto DECIMAL(10,2)
+)
 AS
 BEGIN
-
-	--validar que el medio de pago sea Credit card, Cash, Ewallet
-	IF  @tipo NOT IN ('Credit card','Cash','Ewallet')
+	-- Validaciones de NULL
+	IF @fecha_emision IS NULL
 	BEGIN
-		PRINT 'el medio de pago debe ser Credit card, Cash o Ewallet';
+		PRINT 'Error: La fecha de emisión no puede ser nula.';
 		RETURN;
 	END;
-	
-	--cambiamos el medio de pago a espaniol
-		IF @tipo IN ('Credit card')
-			SET @tipo = 'Tarjeta de credito';
-		IF @tipo IN ('Cash')
-			SET @tipo = 'Efectivo';
-		IF @tipo IN ('Ewallet')
-			SET @tipo = 'Billetera Electronica';
-
-	--validar que el medio de pago no exista
-	IF  EXISTS (SELECT 1 FROM ddbba.MedioPago WHERE @tipo = tipo)
+	IF @dni_cliente IS NULL
 	BEGIN
-		PRINT 'medio de pago ya existente';
+		PRINT 'Error: El DNI del cliente no puede ser nulo.';
+		RETURN;
+	END;
+	IF @id_factura IS NULL
+	BEGIN
+		PRINT 'Error: El ID de la factura no puede ser nulo.';
+		RETURN;
+	END;
+	IF @nombre_producto IS NULL
+	BEGIN
+		PRINT 'Error: El nombre del producto no puede ser nulo.';
+		RETURN;
+	END;
+	IF @precio_unitario IS NULL
+	BEGIN
+		PRINT 'Error: El precio unitario no puede ser nulo.';
+		RETURN;
+	END;
+	IF @cantidad IS NULL
+	BEGIN
+		PRINT 'Error: La cantidad no puede ser nula.';
+		RETURN;
+	END;
+	IF @monto IS NULL
+	BEGIN
+		PRINT 'Error: El monto no puede ser nulo.';
 		RETURN;
 	END;
 
+	-- Validación de que la fecha no sea futura
+	IF @fecha_emision > GETDATE()
+	BEGIN
+		PRINT 'Error: La fecha de emisión no puede ser futura.';
+		RETURN;
+	END;
+
+	-- Verificación de existencia del cliente
+	IF NOT EXISTS (SELECT 1 FROM ddbba.Cliente WHERE dni_cliente = @dni_cliente)
+	BEGIN
+		PRINT 'Error: No existe el cliente.';
+		RETURN;
+	END;
+
+	-- Verificación de existencia de la factura
+	IF NOT EXISTS (SELECT 1 FROM ddbba.Pedido WHERE id_factura = @id_factura)
+	BEGIN
+		PRINT 'Error: No existe la factura.';
+		RETURN;
+	END;
+
+	-- Verificación de existencia del producto
+	IF NOT EXISTS (SELECT 1 FROM ddbba.Producto WHERE nombre_producto = @nombre_producto)
+	BEGIN
+		PRINT 'Error: No existe el producto.';
+		RETURN;
+	END;
+
+	-- Verificacion de cantidad
+	IF @cantidad < 0
+	BEGIN
+		PRINT 'Error: la cantidad no puede ser negativa';
+		RETURN;
+	END;
+
+	-- Verificacion de Monto
+	IF @monto < 0
+	BEGIN
+		PRINT 'Error: El monto no puede ser negativo';
+		RETURN;
+	END;
+
+
+	-- Inserción de datos
+	INSERT INTO ddbba.NotaCredito (fecha_emision, dni_cliente, id_factura, nombre_producto, precio_unitario, cantidad, monto)
+	VALUES (@fecha_emision, @dni_cliente, @id_factura, @nombre_producto, @precio_unitario, @cantidad, @monto);
+
+	PRINT 'Valores insertados correctamente.';
+END;
+GO
+-- SP PARA MODIFICAR NOTA CREDITO
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'modificarNotaCredito')
+BEGIN
+	DROP PROCEDURE Procedimientos.modificarNotaCredito;
+END;
+GO
+CREATE PROCEDURE Procedimientos.modificarNotaCredito(
+	@id_nota_credito INT,  -- ID de la Nota de Crédito a modificar
+	@fecha_emision DATETIME,
+	@dni_cliente CHAR(8),
+	@id_factura CHAR(12),
+	@nombre_producto VARCHAR(100),
+	@precio_unitario DECIMAL(10,2),
+	@cantidad INT,
+	@monto DECIMAL(10,2)
+)
+AS
+BEGIN
+	-- Validaciones de NULL
+	IF @id_nota_credito IS NULL
+	BEGIN
+		PRINT 'Error: El ID de la Nota de Crédito no puede ser nulo.';
+		RETURN;
+	END;
+	IF @fecha_emision IS NULL
+	BEGIN
+		PRINT 'Error: La fecha de emisión no puede ser nula.';
+		RETURN;
+	END;
+	IF @dni_cliente IS NULL
+	BEGIN
+		PRINT 'Error: El DNI del cliente no puede ser nulo.';
+		RETURN;
+	END;
+	IF @id_factura IS NULL
+	BEGIN
+		PRINT 'Error: El ID de la factura no puede ser nulo.';
+		RETURN;
+	END;
+	IF @nombre_producto IS NULL
+	BEGIN
+		PRINT 'Error: El nombre del producto no puede ser nulo.';
+		RETURN;
+	END;
+	IF @precio_unitario IS NULL
+	BEGIN
+		PRINT 'Error: El precio unitario no puede ser nulo.';
+		RETURN;
+	END;
+	IF @cantidad IS NULL
+	BEGIN
+		PRINT 'Error: La cantidad no puede ser nula.';
+		RETURN;
+	END;
+	IF @monto IS NULL
+	BEGIN
+		PRINT 'Error: El monto no puede ser nulo.';
+		RETURN;
+	END;
+
+	-- Validación de que la fecha no sea futura
+	IF @fecha_emision > GETDATE()
+	BEGIN
+		PRINT 'Error: La fecha de emisión no puede ser futura.';
+		RETURN;
+	END;
+
+	-- Verificación de existencia de la Nota de Crédito
+	IF NOT EXISTS (SELECT 1 FROM ddbba.NotaCredito WHERE id_nota_credito = @id_nota_credito)
+	BEGIN
+		PRINT 'Error: No existe la Nota de Crédito con ese ID.';
+		RETURN;
+	END;
+
+	-- Verificación de existencia del cliente
+	IF NOT EXISTS (SELECT 1 FROM ddbba.Cliente WHERE dni_cliente = @dni_cliente)
+	BEGIN
+		PRINT 'Error: No existe el cliente.';
+		RETURN;
+	END;
+
+	-- Verificación de existencia de la factura
+	IF NOT EXISTS (SELECT 1 FROM ddbba.Pedido WHERE id_factura = @id_factura)
+	BEGIN
+		PRINT 'Error: No existe la factura.';
+		RETURN;
+	END;
+
+	-- Verificación de existencia del producto
+	IF NOT EXISTS (SELECT 1 FROM ddbba.Producto WHERE nombre_producto = @nombre_producto)
+	BEGIN
+		PRINT 'Error: No existe el producto.';
+		RETURN;
+	END;
+
+	-- Verificacion de cantidad
+	IF @cantidad < 0
+	BEGIN
+		PRINT 'Error: la cantidad no puede ser negativa';
+		RETURN;
+	END;
+
+	-- Verificacion de Monto
+	IF @monto < 0
+	BEGIN
+		PRINT 'Error: El monto no puede ser negativo';
+		RETURN;
+	END;
+
+	-- Modificación de los datos
+	UPDATE ddbba.NotaCredito
+	SET fecha_emision = @fecha_emision,
+		dni_cliente = @dni_cliente,
+		id_factura = @id_factura,
+		nombre_producto = @nombre_producto,
+		precio_unitario = @precio_unitario,
+		cantidad = @cantidad,
+		monto = @monto
+	WHERE id_nota_credito = @id_nota_credito;
+
+	PRINT 'Nota de Crédito modificada correctamente.';
+END;
+GO
+
+-- SP PARA ELIMINAR NOTA DE CRÉDITO
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'eliminarNotaCredito')
+BEGIN
+	DROP PROCEDURE Procedimientos.eliminarNotaCredito;
+END;
+GO
+CREATE PROCEDURE Procedimientos.eliminarNotaCredito(
+	@id_nota_credito INT -- ID de la Nota de Crédito a eliminar
+)
+AS
+BEGIN
+	-- Validación de NULL
+	IF @id_nota_credito IS NULL
+	BEGIN
+		PRINT 'Error: El ID de la Nota de Crédito no puede ser nulo.';
+		RETURN;
+	END;
+
+	-- Verificación de existencia de la Nota de Crédito
+	IF NOT EXISTS (SELECT 1 FROM ddbba.NotaCredito WHERE id_nota_credito = @id_nota_credito)
+	BEGIN
+		PRINT 'Error: No existe la Nota de Crédito con ese ID.';
+		RETURN;
+	END;
+
+	-- Eliminación de la Nota de Crédito
+	DELETE FROM ddbba.NotaCredito WHERE id_nota_credito = @id_nota_credito;
+
+	PRINT 'Nota de Crédito eliminada correctamente.';
+END;
+GO
+
+
+-- SP PARA INSERTAR MEDIO DE PAGO---------------------------------------------------------------
+IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarMedioPago')
+BEGIN
+	DROP PROCEDURE Procedimientos.insertarMedioPago;
+END;
+GO
+CREATE PROCEDURE Procedimientos.insertarMedioPago
+	@tipo VARCHAR(50)
+AS
+BEGIN
+	-- Validar que el parámetro no sea NULL
+	IF @tipo IS NULL
+	BEGIN
+		PRINT 'Error: El tipo de medio de pago no puede ser nulo.';
+		RETURN;
+	END;
+
+	-- Validar que el medio de pago sea Credit card, Cash o Ewallet
+	IF @tipo NOT IN ('Credit card', 'Cash', 'Ewallet')
+	BEGIN
+		PRINT 'Error: El medio de pago debe ser Credit card, Cash o Ewallet.';
+		RETURN;
+	END;
+
+	-- Convertir a español
+	IF @tipo = 'Credit card' SET @tipo = 'Tarjeta de credito';
+	IF @tipo = 'Cash' SET @tipo = 'Efectivo';
+	IF @tipo = 'Ewallet' SET @tipo = 'Billetera Electronica';
+
+	-- Validar que el medio de pago no exista
+	IF EXISTS (SELECT 1 FROM ddbba.MedioPago WHERE tipo = @tipo)
+	BEGIN
+		PRINT 'Error: El medio de pago ya existe.';
+		RETURN;
+	END;
+
+	-- Insertar el medio de pago
 	INSERT INTO ddbba.MedioPago (tipo) VALUES (@tipo);
 	PRINT 'Medio de Pago ingresado correctamente.';
-END;
-go
 
---SP PARA SUCURSAL
+END;
+GO
+
+-- SP PARA MODIFICAR MEDIO DE PAGO
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'modificarMedioPago')
+BEGIN
+	DROP PROCEDURE Procedimientos.modificarMedioPago;
+END;
+GO
+CREATE PROCEDURE Procedimientos.modificarMedioPago
+	@id_mp INT,
+	@nuevo_tipo VARCHAR(50)
+AS
+BEGIN
+	-- Validar que el ID del medio de pago no sea NULL
+	IF @id_mp IS NULL
+	BEGIN
+		PRINT 'Error: El ID del medio de pago no puede ser nulo.';
+		RETURN;
+	END;
+
+	-- Validar que el nuevo tipo de pago no sea NULL
+	IF @nuevo_tipo IS NULL
+	BEGIN
+		PRINT 'Error: El tipo de medio de pago no puede ser nulo.';
+		RETURN;
+	END;
+
+	-- Validar que el medio de pago exista
+	IF NOT EXISTS (SELECT 1 FROM ddbba.MedioPago WHERE id_mp = @id_mp)
+	BEGIN
+		PRINT 'Error: No existe un medio de pago con ese ID.';
+		RETURN;
+	END;
+
+	-- Validar que el nuevo medio de pago sea Credit card, Cash o Ewallet
+	IF @nuevo_tipo NOT IN ('Credit card', 'Cash', 'Ewallet')
+	BEGIN
+		PRINT 'Error: El medio de pago debe ser Credit card, Cash o Ewallet.';
+		RETURN;
+	END;
+
+	-- Convertir a español
+	IF @nuevo_tipo = 'Credit card' SET @nuevo_tipo = 'Tarjeta de credito';
+	IF @nuevo_tipo = 'Cash' SET @nuevo_tipo = 'Efectivo';
+	IF @nuevo_tipo = 'Ewallet' SET @nuevo_tipo = 'Billetera Electronica';
+
+	-- Validar que el nuevo medio de pago no exista ya en la tabla
+	IF EXISTS (SELECT 1 FROM ddbba.MedioPago WHERE tipo = @nuevo_tipo)
+	BEGIN
+		PRINT 'Error: Ya existe un medio de pago con ese tipo.';
+		RETURN;
+	END;
+
+	-- Actualizar el medio de pago
+	UPDATE ddbba.MedioPago
+	SET tipo = @nuevo_tipo
+	WHERE id_mp = @id_mp;
+
+	PRINT 'Medio de Pago modificado correctamente.';
+END;
+GO
+
+-- SP PARA ELIMINAR MEDIO DE PAGO POR ID O NOMBRE
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'eliminarMedioPago')
+BEGIN
+	DROP PROCEDURE Procedimientos.eliminarMedioPago;
+END;
+GO
+CREATE PROCEDURE Procedimientos.eliminarMedioPago
+	@id_medio_pago INT = NULL,
+	@nombre_medio_pago VARCHAR(50) = NULL
+AS
+BEGIN
+	-- Validar que al menos uno de los parámetros no sea NULL
+	IF @id_medio_pago IS NULL AND @nombre_medio_pago IS NULL
+	BEGIN
+		PRINT 'Error: Debe especificar un ID o un nombre del medio de pago.';
+		RETURN;
+	END;
+
+	-- Si se proporcionó el ID, validar que exista
+	IF @id_medio_pago IS NOT NULL
+	BEGIN
+		IF NOT EXISTS (SELECT 1 FROM ddbba.MedioPago WHERE id_mp = @id_medio_pago)
+		BEGIN
+			PRINT 'Error: No existe un medio de pago con ese ID.';
+			RETURN;
+		END;
+		-- Eliminar el medio de pago por ID
+		DELETE FROM ddbba.MedioPago WHERE id_mp = @id_medio_pago;
+		PRINT 'Medio de Pago con ID ' + CAST(@id_medio_pago AS VARCHAR) + ' eliminado correctamente.';
+		RETURN;
+	END;
+
+	-- Si se proporcionó el nombre, validar que exista
+	IF @nombre_medio_pago IS NOT NULL
+	BEGIN
+		IF NOT EXISTS (SELECT 1 FROM ddbba.MedioPago WHERE tipo = @nombre_medio_pago)
+		BEGIN
+			PRINT 'Error: No existe un medio de pago con ese nombre.';
+			RETURN;
+		END;
+		-- Eliminar el medio de pago por nombre
+		DELETE FROM ddbba.MedioPago WHERE tipo = @nombre_medio_pago;
+		PRINT 'Medio de Pago con nombre ' + @nombre_medio_pago + ' eliminado correctamente.';
+		RETURN;
+	END;
+
+END;
+GO
+
+
+--SP PARA SUCURSAL----------------------------------------------------------------------------
 --insercion
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarSucursal')
 BEGIN
@@ -1067,7 +1566,7 @@ END;
 GO
 
 
---SP PARA PROVEEDOR
+--SP PARA INSERTAR PROVEEDOR---------------------------------------------------------------
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarProveedor')
 BEGIN
 	DROP PROCEDURE Procedimientos.insertarProveedor ;
@@ -1078,7 +1577,7 @@ CREATE PROCEDURE Procedimientos.insertarProveedor
 AS
 BEGIN
         -- Validar que el nombre no sea nulo 
-        IF (@nombre IS NULL)
+        IF (@nombre IS NULL OR @nombre = ' ')
         BEGIN
             PRINT 'El nombre del proveedor no puede ser nulo.'
             RETURN; 
@@ -1098,152 +1597,260 @@ BEGIN
  
 END;
 go
+-- SP PARA MODIFICAR PROVEEDOR
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'modificarProveedor')
+BEGIN
+    DROP PROCEDURE Procedimientos.modificarProveedor;
+END;
+go
+CREATE PROCEDURE Procedimientos.modificarProveedor
+    @id_proveedor INT,
+    @nuevo_nombre NVARCHAR(255)
+AS
+BEGIN
+    -- Validar que el nombre no sea nulo
+    IF (@nuevo_nombre IS NULL)
+    BEGIN
+        PRINT 'El nombre del proveedor no puede ser nulo.';
+        RETURN;
+    END;
 
---SP PARA ProductoSolicitado
+    -- Validar que el proveedor exista
+    IF NOT EXISTS (SELECT 1 FROM ddbba.Proveedor WHERE id_proveedor = @id_proveedor)
+    BEGIN
+        PRINT 'El proveedor no existe en la base de datos.';
+        RETURN;
+    END;
+
+    -- Validar que el nuevo nombre no exista ya para otro proveedor
+    IF EXISTS (SELECT 1 FROM ddbba.Proveedor WHERE nombre = @nuevo_nombre AND id_proveedor != @id_proveedor)
+    BEGIN
+        PRINT 'Ya existe otro proveedor con el mismo nombre.';
+        RETURN;
+    END;
+
+    -- Actualizar el nombre del proveedor
+    UPDATE ddbba.Proveedor
+    SET nombre = @nuevo_nombre
+    WHERE id_proveedor = @id_proveedor;
+
+    PRINT 'Proveedor actualizado correctamente.';
+END;
+go
+-- SP PARA ELIMINAR PROVEEDOR
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'eliminarProveedor')
+BEGIN
+    DROP PROCEDURE Procedimientos.eliminarProveedor;
+END;
+go
+CREATE PROCEDURE Procedimientos.eliminarProveedor
+    @id_proveedor INT
+AS
+BEGIN
+    -- Validar que el proveedor exista
+    IF NOT EXISTS (SELECT 1 FROM ddbba.Proveedor WHERE id_proveedor = @id_proveedor)
+    BEGIN
+        PRINT 'El proveedor no existe en la base de datos.';
+        RETURN;
+    END;
+
+    -- Eliminar el proveedor
+    DELETE FROM ddbba.Proveedor WHERE id_proveedor = @id_proveedor;
+
+    PRINT 'Proveedor eliminado correctamente.';
+END;
+go
+
+--SP PARA INSERTAR ProductoSolicitado------------------------------------------------------------------
+
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarProducto_Solicitado')
 BEGIN
-	DROP PROCEDURE Procedimientos.insertarProductoSolicitado;
+    DROP PROCEDURE Procedimientos.insertarProductoSolicitado;
 END;
 go
 CREATE PROCEDURE Procedimientos.insertarProductoSolicitado
-	@id_factura CHAR(12),
-	@id_producto INT,
-	@cantidad INT
+    @id_factura CHAR(12),
+    @id_producto INT,
+    @cantidad INT
 AS
-
 BEGIN
-	--verificar que no se inserten datos iguales
-	if  EXISTS (SELECT 1 FROM ddbba.ProductoSolicitado WHERE id_producto = @id_producto and @id_factura=id_factura )
-	BEGIN
-		PRINT 'El pedido ya tiene esos datos'
-		RETURN;
-	END;
-	--verificar si el producto existe
-	if NOT EXISTS (SELECT 1 FROM ddbba.Producto WHERE id_producto = @id_producto )
-	BEGIN
-		PRINT 'El producto no existe'
-		RETURN;
-	END;
-	--verificar que el pedido existe
-	if NOT EXISTS (SELECT 1 FROM ddbba.Pedido WHERE @id_factura = id_factura )
-	BEGIN
-		PRINT 'El pedido no existe'
-		RETURN;
-	END;
-	--verificar que la cantidad pedida es mayor a cero
-	if(@cantidad <= 0)
-	BEGIN 
-		PRINT 'La cantidad debe ser mayor a cero'
-		RETURN;
-	END;
+    -- Validar que los parámetros no sean nulos
+    IF (@id_factura IS NULL)
+    BEGIN
+        PRINT 'El id_factura no puede ser nulo';
+        RETURN;
+    END;
 
-	INSERT INTO ddbba.ProductoSolicitado(id_producto, id_factura, cantidad)
+    IF (@id_producto IS NULL)
+    BEGIN
+        PRINT 'El id_producto no puede ser nulo';
+        RETURN;
+    END;
+
+    IF (@cantidad IS NULL)
+    BEGIN
+        PRINT 'La cantidad no puede ser nula';
+        RETURN;
+    END;
+
+    -- Verificar que no se inserten datos duplicados
+    IF EXISTS (SELECT 1 FROM ddbba.ProductoSolicitado WHERE id_producto = @id_producto AND @id_factura = id_factura)
+    BEGIN
+        PRINT 'El pedido ya tiene esos datos';
+        RETURN;
+    END;
+
+    -- Verificar si el producto existe
+    IF NOT EXISTS (SELECT 1 FROM ddbba.Producto WHERE id_producto = @id_producto)
+    BEGIN
+        PRINT 'El producto no existe';
+        RETURN;
+    END;
+
+    -- Verificar que el pedido exista
+    IF NOT EXISTS (SELECT 1 FROM ddbba.Pedido WHERE @id_factura = id_factura)
+    BEGIN
+        PRINT 'El pedido no existe';
+        RETURN;
+    END;
+
+    -- Verificar que la cantidad pedida sea mayor a cero
+    IF (@cantidad <= 0)
+    BEGIN
+        PRINT 'La cantidad debe ser mayor a cero';
+        RETURN;
+    END;
+
+    -- Insertar los datos en la tabla
+    INSERT INTO ddbba.ProductoSolicitado(id_producto, id_factura, cantidad)
     VALUES (@id_producto, @id_factura, @cantidad);
-	PRINT 'Valores insertados correctamente'
+
+    PRINT 'Valores insertados correctamente';
 END;
 go
 
---SP PARA NOTA CREDITO
-IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarNotaCredito')
+-- SP PARA MODIFICAR Producto_Solicitado
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'modificarProductoSolicitado')
 BEGIN
-	DROP PROCEDURE Procedimientos.insertarNotaCredito;
+    DROP PROCEDURE Procedimientos.modificarProductoSolicitado;
 END;
 go
-CREATE PROCEDURE Procedimientos.insertarNotaCredito(
-		@id_empleado INT,
-		@id_factura CHAR(12),
-		@cantidadADevolver int, --cantidad de unidades a devolver
-		@motivo VARCHAR(255) --descripcion de porque se va a realizar la devolucion
-
-)
+CREATE PROCEDURE Procedimientos.modificarProductoSolicitado
+    @id_factura CHAR(12),
+    @id_producto INT,
+    @cantidad INT
 AS
 BEGIN
-		--verificacion de los parametros de entrada
-		--verificar que existe el id_factura
-		IF NOT EXISTS (SELECT 1 FROM ddbba.Pedido WHERE @id_factura=id_factura)
-		BEGIN
-			PRINT 'NO EXISTE LA FACTURA INGRESADA';
-			RETURN;
-		END;
-		--verificar que existe el id_empleado
-		IF NOT EXISTS (SELECT 1 FROM ddbba.Empleado WHERE @id_empleado=id_empleado)
-		BEGIN
-			PRINT 'NO EXISTE EL EMPLEADO INGRESADO';
-			RETURN;
-		END;
+    -- Validar que los parámetros no sean nulos
+    IF (@id_factura IS NULL)
+    BEGIN
+        PRINT 'El id_factura no puede ser nulo';
+        RETURN;
+    END;
 
-	DECLARE @estado_factura VARCHAR(10);
-	DECLARE @cargo VARCHAR(50);
+    IF (@id_producto IS NULL)
+    BEGIN
+        PRINT 'El id_producto no puede ser nulo';
+        RETURN;
+    END;
 
-	-- Verificar si la factura está pagada
-	SELECT @estado_factura = estado_factura
-	FROM ddbba.Pedido
-	WHERE id_factura = @id_factura;
+    IF (@cantidad IS NULL)
+    BEGIN
+        PRINT 'La cantidad no puede ser nula';
+        RETURN;
+    END;
 
-	IF @estado_factura <> 'Pagado' 
-	BEGIN
-		PRINT 'Error: La nota de crédito solo puede generarse para facturas pagadas.';
-		RETURN;
-	END;
+    -- Verificar si el producto existe
+    IF NOT EXISTS (SELECT 1 FROM ddbba.Producto WHERE id_producto = @id_producto)
+    BEGIN
+        PRINT 'El producto no existe';
+        RETURN;
+    END;
 
-	-- Verificar si el empleado es un Supervisor
-	SELECT @cargo = cargo 
-	FROM ddbba.Empleado
-	WHERE id_empleado = @id_empleado;
+    -- Verificar que el pedido exista
+    IF NOT EXISTS (SELECT 1 FROM ddbba.Pedido WHERE @id_factura = id_factura)
+    BEGIN
+        PRINT 'El pedido no existe';
+        RETURN;
+    END;
 
-	IF @cargo <> 'Supervisor'
-	BEGIN
-		PRINT 'Error: Solo los supervisores pueden generar notas de crédito.';
-		RETURN;
-	END;
+    -- Verificar si el registro ya existe en ProductoSolicitado
+    IF NOT EXISTS (SELECT 1 FROM ddbba.ProductoSolicitado WHERE id_producto = @id_producto AND id_factura = @id_factura)
+    BEGIN
+        PRINT 'El producto solicitado no existe en la factura';
+        RETURN;
+    END;
 
-		--generar fecha actual
-		DECLARE @fecha_emision DATETIME;
-		SET @fecha_emision = GETDATE();
+    -- Verificar que la cantidad pedida sea mayor a cero
+    IF (@cantidad <= 0)
+    BEGIN
+        PRINT 'La cantidad debe ser mayor a cero';
+        RETURN;
+    END;
 
-		--busco dni_cliente
-		DECLARE @dni_cliente INT;
-		SELECT @dni_cliente=dni_cliente FROM ddbba.Pedido Ped WHERE Ped.id_factura=@id_factura;
+    -- Modificar los datos en la tabla ProductoSolicitado
+    UPDATE ddbba.ProductoSolicitado
+    SET cantidad = @cantidad
+    WHERE id_producto = @id_producto AND id_factura = @id_factura;
 
-		--nombre del producto
-		DECLARE @nombre_producto VARCHAR(100);
-		SELECT  @nombre_producto=nombre_producto
-		FROM ddbba.Producto P
-		INNER JOIN ddbba.ProductoSolicitado PS ON P.id_producto=PS.id_producto
-		WHERE @id_factura=PS.id_factura;
-
-		--precio del producto
-		DECLARE @precio_unitario DECIMAL(10,2);
-		SELECT  @precio_unitario=precio_unitario
-		FROM ddbba.Producto P
-		INNER JOIN ddbba.ProductoSolicitado PS ON P.id_producto=PS.id_producto
-		WHERE @id_factura=PS.id_factura;
-
-		--cantidad
-		DECLARE @cantidad INT;
-		SELECT  @cantidad=cantidad
-		FROM ddbba.ProductoSolicitado PS
-		WHERE @id_factura=PS.id_factura;
-
-			--verificacion que la cantidad a devolver no sea mayor a la pagada
-			IF @cantidadADevolver > @cantidad
-				BEGIN
-			PRINT 'La cantidad no puede mayor a la pagada';
-			RETURN;
-				END;
-		--monto
-		DECLARE @monto DECIMAL(10,2);
-		SET  @monto = (@cantidad*@precio_unitario);
-
-
-
-	
-
-INSERT INTO ddbba.NotaCredito(fecha_emision,dni_cliente,id_factura,nombre_producto,precio_unitario, cantidad,monto,cantidadADevolver,motivo)
-VALUES (@fecha_emision,@dni_cliente,@id_factura,@nombre_producto,@precio_unitario, @cantidad,@monto,@cantidadADevolver,@motivo);
-PRINT 'Valores insertados correctamente'
+    PRINT 'Valores modificados correctamente';
 END;
 go
+
+-- SP PARA ELIMINAR Producto_Solicitado
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'eliminarProductoSolicitado')
+BEGIN
+    DROP PROCEDURE Procedimientos.eliminarProductoSolicitado;
+END;
+go
+CREATE PROCEDURE Procedimientos.eliminarProductoSolicitado
+    @id_factura CHAR(12),
+    @id_producto INT
+AS
+BEGIN
+    -- Validar que los parámetros no sean nulos
+    IF (@id_factura IS NULL)
+    BEGIN
+        PRINT 'El id_factura no puede ser nulo';
+        RETURN;
+    END;
+
+    IF (@id_producto IS NULL)
+    BEGIN
+        PRINT 'El id_producto no puede ser nulo';
+        RETURN;
+    END;
+
+    -- Verificar que el producto existe
+    IF NOT EXISTS (SELECT 1 FROM ddbba.Producto WHERE id_producto = @id_producto)
+    BEGIN
+        PRINT 'El producto no existe';
+        RETURN;
+    END;
+
+    -- Verificar que el pedido exista
+    IF NOT EXISTS (SELECT 1 FROM ddbba.Pedido WHERE @id_factura = id_factura)
+    BEGIN
+        PRINT 'El pedido no existe';
+        RETURN;
+    END;
+
+    -- Verificar que el producto solicitado exista en la factura
+    IF NOT EXISTS (SELECT 1 FROM ddbba.ProductoSolicitado WHERE id_producto = @id_producto AND id_factura = @id_factura)
+    BEGIN
+        PRINT 'El producto solicitado no existe en la factura';
+        RETURN;
+    END;
+
+    -- Eliminar el producto solicitado de la tabla
+    DELETE FROM ddbba.ProductoSolicitado
+    WHERE id_producto = @id_producto AND id_factura = @id_factura;
+
+    PRINT 'Producto solicitado eliminado correctamente';
+END;
+go
+
+
 
 --SP PARA SABER LA COTIZACION DEL DOLAR (API)
 --generaremos el Store Procedure que se encarga de llamr a una API para saber el valor de la cotizacion del dolar en una fecha en particular
@@ -1299,3 +1906,4 @@ DECLARE @precioCompra FLOAT;
 EXEC Procedimientos.GetDolarCotizacion '2020/01/01', @precioCompra OUTPUT;
 PRINT 'El valor de compra del dólar es: ' + CAST(@precioCompra AS VARCHAR);
 */
+=======
