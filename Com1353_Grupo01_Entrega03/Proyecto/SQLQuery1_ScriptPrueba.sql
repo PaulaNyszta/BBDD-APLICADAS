@@ -1,28 +1,134 @@
 -- 2. CRIPT DE PRUEBAS - 28/02/2025 - Com 1353 - Grupo 01 - Base de Datos Aplicadas, BARRIONUEVO LUCIANO [45429539], NYSZTA PAULA [45129511].
---ATENCION: Estas pruebas se ejecutaran paso por paso
+--ATENCION: Estas pruebas se ejecutaran paso por paso siguiendo las instruccion en el orden dado :)
 Use Com1353G01
--- prueba para SP insertarSucursal, Ejecute los siguientes juegos de prueba y luego el SELECT para ver los resultados
--- datos invalidos
-EXEC ddbba.insertarSucursal
-	'Ramos','Av Rivadavia 2343','L 00:00','0000000000'; --debe dar error en la localidad
-EXEC ddbba.insertarSucursal
-	'Ramos Mejia','Av Rivadavia 2343','L 00:00','0000000000'; --debe dar error en el telefono
-EXEC ddbba.insertarSucursal
-	'Ramos Mejia','Av Rivadavia 2343','L 00:00','000000000'; --debe insertar la sucursal correctamente
-EXEC ddbba.insertarSucursal
-	'Ramos Mejia','Av Rivadavia 2343','L 00:00','000000000'; --debe dacer que la sucursal ya es existente
-SELECT * FROM ddbba.Sucursal WHERE localidad='Ramos Mejia' and direccion='Av Rivadavia 2343'; --observe que la sucursal fue agregado exitosamente
+
+--PRUEBA 1 TABLA SUCURSAL
+--1.1. Insercion
+-- 1.1.1: Insertar una sucursal válida
+EXEC Procedimientos.insertarSucursal 
+    @localidad = 'Ramos Mejia', 
+    @direccion = 'Av. Rivadavia 1234', 
+    @horario = '09:00-18:00', 
+    @telefono = '123456789';
+
+-- 1.1.2: Intentar insertar una sucursal con la misma localidad y dirección (ya existente)
+EXEC Procedimientos.insertarSucursal 
+    @localidad = 'Ramos Mejia', 
+    @direccion = 'Av. Rivadavia 1234', 
+    @horario = '10:00-19:00', 
+    @telefono = '987654321';
+
+-- 1.1.3: Intentar insertar una sucursal sin dirección (valor nulo)
+EXEC Procedimientos.insertarSucursal 
+    @localidad = 'San Justo', 
+    @direccion = NULL, 
+    @horario = '08:00-16:00', 
+    @telefono = '123456789';
+
+-- 1.1.4: Insertar una sucursal en una localidad no permitida
+EXEC Procedimientos.insertarSucursal 
+    @localidad = 'Buenos Aires', 
+    @direccion = 'Calle Falsa 123', 
+    @horario = '10:00-20:00', 
+    @telefono = '123456789';
+
+-- 1.1.5: Insertar una sucursal con un teléfono de menos de 9 caracteres
+EXEC Procedimientos.insertarSucursal 
+    @localidad = 'Lomas del Mirador', 
+    @direccion = 'Calle Real 456', 
+    @horario = '07:00-15:00', 
+    @telefono = '12345678';
+
+-- 1.1.6: Insertar una sucursal con un teléfono de más de 9 caracteres
+EXEC Procedimientos.insertarSucursal 
+    @localidad = 'San Justo', 
+    @direccion = 'Av. Libertador 789', 
+    @horario = '12:00-21:00', 
+    @telefono = '1234567890';
+
+-- 1.1.7: Insertar una sucursal sin localidad (valor nulo)
+EXEC Procedimientos.insertarSucursal 
+    @localidad = NULL, 
+    @direccion = 'Calle Nueva 321', 
+    @horario = '09:00-17:00', 
+    @telefono = '123456789';
+
+--1.1.8 Verificar los cambios
+select * from ddbba.Sucursal 
+
+
+--1.2. Modificacion
+-- 1.2.1: Modificar el horario y teléfono de una sucursal existente
+EXEC Procedimientos.modificarSucursal 
+    @localidad = 'Ramos Mejia', 
+    @direccion = 'Av. Rivadavia 1234', 
+    @nuevo_horario = '10:00-20:00', 
+    @nuevo_telefono = '987654321';
+
+-- 1.2.2: Intentar modificar una sucursal que no existe
+EXEC Procedimientos.modificarSucursal 
+    @localidad = 'Buenos Aires', 
+    @direccion = 'Calle Falsa 123', 
+    @nuevo_horario = '09:00-18:00', 
+    @nuevo_telefono = '123456789';
+
+-- 1.2.3: Intentar modificar con un teléfono de menos de 9 caracteres
+EXEC Procedimientos.modificarSucursal 
+    @localidad = 'Ramos Mejia', 
+    @direccion = 'Av. Rivadavia 1234', 
+    @nuevo_telefono = '12345678';
+
+-- 1.2.4: Intentar modificar con un teléfono de más de 9 caracteres
+EXEC Procedimientos.modificarSucursal 
+    @localidad = 'Ramos Mejia', 
+    @direccion = 'Av. Rivadavia 1234', 
+    @nuevo_telefono = '1234567890';
+
+-- 1.2.5: No modificar nada (solo verifica que no falle si no se pasan nuevos valores)
+EXEC Procedimientos.modificarSucursal 
+    @localidad = 'Ramos Mejia', 
+    @direccion = 'Av. Rivadavia 1234'
+
+
+--1.3. Eliminacion
+-- 1.3.1: Eliminar una sucursal existente
+EXEC Procedimientos.eliminarSucursal 
+    @localidad = 'Ramos Mejia', 
+    @direccion = 'Av. Rivadavia 1234';
+
+-- 1.3.2: Intentar eliminar una sucursal que no existe
+EXEC Procedimientos.eliminarSucursal 
+    @localidad = 'Buenos Aires', 
+    @direccion = 'Calle Falsa 123';
+
+-- 1.3.3: Intentar eliminar una sucursal sin proporcionar la localidad (NULL)
+EXEC Procedimientos.eliminarSucursal 
+    @localidad = NULL, 
+    @direccion = 'Calle Nueva 321';
+
+-- 1.3.4: Intentar eliminar una sucursal sin proporcionar la dirección (NULL)
+EXEC Procedimientos.eliminarSucursal 
+    @localidad = 'San Justo', 
+    @direccion = NULL;
+
+--1.3.5 observar cambios
+select * from ddbba.Sucursal
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 --PRUEBA 2 TABLA EMPLEADO
 --2.1 insertar
 
--- Asegurarnos de que los datos existen antes de la prueba
 -- Suponemos que tenemos una tabla `Sucursal` para hacer pruebas con id_sucursal
 -- 2.1.1. Crear una sucursal de prueba para usarla en las inserciones
 SET IDENTITY_INSERT ddbba.Sucursal ON; --para que deje agregar manualmente el id
+
 INSERT INTO ddbba.Sucursal (id_sucursal, localidad, direccion, horario, telefono)
 VALUES (1, 'Ramos Mejía', 'Calle Ficticia 123', '09:00 - 18:00', '123456789');
+
 SET IDENTITY_INSERT ddbba.Sucursal OFF;
+
 -- 2.1.2 Insertar un empleado con datos válidos
 EXEC Procedimientos.insertarEmpleado
     @id_empleado = 1, 
@@ -166,13 +272,10 @@ EXEC Procedimientos.insertarEmpleado
 -- 2.1.12. Verificación Final: Mostrar los empleados insertados
 SELECT * FROM ddbba.Empleado; -- Verificar que los empleados se hayan insertado correctamente
 
---2.2 Modificar
--- Asegurarnos de que los datos existen antes de la prueba
--- Suponemos que tenemos una tabla `Empleado` con datos de prueba
+
 
 --2.2. Modificar
--- 2.2.1. Prueba de Modificación Exitosa
--- Cambiar dirección, turno y email empresarial
+-- 2.2.1. Prueba de Modificación Exitosa( cambiar dirección, turno y email empresarial)
 EXEC Procedimientos.modificarEmpleado
     @id_empleado = 1, 
     @direccion = 'Nueva Dirección 456', 
@@ -209,50 +312,55 @@ EXEC Procedimientos.modificarEmpleado
     @nombre = 'Carlos'; -- Sólo se cambia el nombre
 
 -- 2.2.8. Verificar si la modificación de datos fue exitosa
-SELECT * FROM ddbba.Empleado WHERE id_empleado = 1; -- Mostrar datos del empleado después de la modificación
+SELECT * FROM ddbba.Empleado 
+
 
 --2.3. Eliminacion
--- Asegurarnos de que los datos existen antes de la prueba
--- Primero, insertamos algunos empleados de prueba
-
 -- 2.3.1. Crear empleados de prueba para hacer las pruebas de eliminación
 INSERT INTO ddbba.Empleado (id_empleado, cuil, dni, direccion, apellido, nombre, email_personal, email_empresarial, turno, cargo, id_sucursal)
 VALUES 
 (2, '20-23456789-0', 23456789, 'Calle Ejemplo 456', 'Gómez', 'Carlos', 'carlos.gomez@gmail.com', 'carlos.gomez@empresa.com', 'TM', 'Analista', 1),
 (3, '20-34567890-1', 34567890, 'Calle Ejemplo 789', 'Martínez', 'Ana', 'ana.martinez@gmail.com', 'ana.martinez@empresa.com', 'Jornada completa', 'Jefe de Proyecto', 1);
 
--- 2.3.2. Prueba de Eliminación Exitosa
--- Eliminar un empleado que existe
+-- 2.3.2. Prueba de Eliminación Exitosa(eliminar un empleado que existe)
 EXEC Procedimientos.eliminarEmpleado @id_empleado = 1;
 
 -- 2.3.3. Prueba de Eliminación con `id_empleado` Inexistente (debe dar error)
--- Intentamos eliminar un empleado que no existe
 EXEC Procedimientos.eliminarEmpleado @id_empleado = 999; -- ID no existente (error esperado)
 
 -- 2.3.4. Verificación Final: Mostrar los empleados restantes
 SELECT * FROM ddbba.Empleado; -- Verificar que solo queda el empleado con id_empleado = 2 y 3 (eliminado el de id_empleado = 1)
+
 -- 2.3.5 Eliminar el resto de los empleados que existe
 EXEC Procedimientos.eliminarEmpleado @id_empleado = 2;
 EXEC Procedimientos.eliminarEmpleado @id_empleado = 3;
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 --PRUEBA 3 TABLA PEDIDO
 --3.1. insertar
 --generamos datos validos para poder inserta pedido
 INSERT INTO ddbba.Cliente (dni,genero,tipo,apellido,nombre,fecha_nac )
 VALUES ('12345678','Female','Member','Perez','Jazmin','2019-11-12'),
 		('87654321','Female','Member','Perez','Lola','2019-11-12')
+
 SET IDENTITY_INSERT ddbba.Mediopago ON;
+
 INSERT INTO ddbba.Mediopago (id_mp,tipo)
 VALUES (1,'Cash'),
 		(2,'Ewallet')
+
 SET IDENTITY_INSERT ddbba.Mediopago OFF;
+
 SET IDENTITY_INSERT ddbba.Sucursal ON;
+
 INSERT INTO ddbba.Sucursal (id_sucursal,localidad,horario,telefono)
 VALUES (2,'Ramos Mejia','nose','444-4444'),
 		(3,'Lomas del Mirador','nose','444-4444')
+
 SET IDENTITY_INSERT ddbba.Sucursal OFF;
+
 INSERT INTO ddbba.Empleado (id_empleado, cuil, dni, direccion, apellido, nombre, email_personal, email_empresarial, turno, cargo, id_sucursal)
 VALUES (100, '20-23456789-0', 23456789, 'Calle Ejemplo 456', 'Gómez', 'Carlos', 'carlos.gomez@gmail.com', 'carlos.gomez@empresa.com', 'TM', 'Analista', 2),
 		(101, '20-23456780-0', 23456780, 'Calle Ejemplo 456', 'Gómez', 'Carlos', 'carlos.gomez@gmail.com', 'carlos.gomez@empresa.com', 'TM', 'Analista', 2)
@@ -284,7 +392,7 @@ EXEC Procedimientos.InsertarPedido
     @tipo_factura = 'A',
     @estado_factura = 'Pagado';
 
--- 3.1.4. Caso con fecha de pedido futura
+-- 3.1.3. Caso con fecha de pedido futura
 EXEC Procedimientos.InsertarPedido 
     @id_factura = '123-45-6789',
     @fecha_pedido = '2035-01-01',
@@ -297,7 +405,7 @@ EXEC Procedimientos.InsertarPedido
     @tipo_factura = 'A',
     @estado_factura = 'Pagado';
 
--- 3.1.5. Caso con cliente nulo
+-- 3.1.4. Caso con cliente nulo
 EXEC Procedimientos.InsertarPedido 
     @id_factura = '123-45-6789',
     @fecha_pedido = '2020-03-05',
@@ -310,7 +418,7 @@ EXEC Procedimientos.InsertarPedido
     @tipo_factura = 'A',
     @estado_factura = 'Pagado';
 
--- 3.1.6. Caso con id_mp no existente
+-- 3.1.5. Caso con id_mp no existente
 EXEC Procedimientos.InsertarPedido 
     @id_factura = '123-45-6789',
     @fecha_pedido = '2020-03-05',
@@ -323,7 +431,7 @@ EXEC Procedimientos.InsertarPedido
     @tipo_factura = 'A',
     @estado_factura = 'Pagado';
 
--- 3.1.7. Caso con identificador de pago con más de 30 caracteres
+-- 3.1.6. Caso con identificador de pago con más de 30 caracteres
 EXEC Procedimientos.InsertarPedido 
     @id_factura = '123-45-6789',
     @fecha_pedido = '2020-03-05',
@@ -336,7 +444,7 @@ EXEC Procedimientos.InsertarPedido
     @tipo_factura = 'A',
     @estado_factura = 'Pagado';
 
--- 3.1.8. Caso con empleado no existente
+-- 3.1.7. Caso con empleado no existente
 EXEC Procedimientos.InsertarPedido 
     @id_factura = '123-45-6789',
     @fecha_pedido = '2020-03-05',
@@ -349,7 +457,7 @@ EXEC Procedimientos.InsertarPedido
     @tipo_factura = 'A',
     @estado_factura = 'Pagado';
 
--- 3.1.9. Caso con sucursal no existente
+-- 3.1.8. Caso con sucursal no existente
 EXEC Procedimientos.InsertarPedido 
     @id_factura = '123-45-6789',
     @fecha_pedido = '2020-03-05',
@@ -362,7 +470,7 @@ EXEC Procedimientos.InsertarPedido
     @tipo_factura = 'A',
     @estado_factura = 'Pagado';
 
--- 3.1.10. Caso con tipo_factura inválido
+-- 3.1.9. Caso con tipo_factura inválido
 EXEC Procedimientos.InsertarPedido 
     @id_factura = '123-45-6789',
     @fecha_pedido = '2020-03-05',
@@ -375,7 +483,7 @@ EXEC Procedimientos.InsertarPedido
     @tipo_factura = 'D',  -- Tipo de factura inválido
     @estado_factura = 'Pagado';
 
--- 3.1.11. Caso con estado_factura inválido
+-- 3.1.10. Caso con estado_factura inválido
 EXEC Procedimientos.InsertarPedido 
     @id_factura = '123-45-6789',
     @fecha_pedido = '2020-03-05',
@@ -388,7 +496,7 @@ EXEC Procedimientos.InsertarPedido
     @tipo_factura = 'A',
     @estado_factura = 'Pendiente';  -- Estado de factura inválido
 
--- 3.1.12. Caso válido: Datos correctos
+-- 3.1.11. Caso válido: Datos correctos
 EXEC Procedimientos.InsertarPedido 
     @id_factura = '123-45-6789',
     @fecha_pedido = '2020-03-05',
@@ -400,6 +508,7 @@ EXEC Procedimientos.InsertarPedido
     @id_sucursal = 2,
     @tipo_factura = 'A',
     @estado_factura = 'Pagado';
+
 -- 3.1.12. Verificación Final: Mostrar Pedido insertado
 SELECT * FROM ddbba.Pedido; -- Verificar que los pedidos se hayan insertado correctamente
 
@@ -552,14 +661,14 @@ EXEC Procedimientos.eliminarPedido
 --4.1. insercion
 -- 4.1.1: Inserción válida
 EXEC Procedimientos.insertarProducto
-    @nombre_producto = 'Café Premium',
+   @nombre_producto = 'Café Premium',
     @precio_unitario = 150.00,
     @linea = 'Bebidas',
     @precio_referencia = 130.00,
     @unidad = 'Kg',
     @cantidadPorUnidad = '1',
     @moneda = 'USD',
-    @fecha = '2025-03-02';
+    @fecha = '2025-03-02'; 
 
 -- 4.1.2: Producto ya existente
 EXEC Procedimientos.insertarProducto
@@ -638,8 +747,8 @@ EXEC Procedimientos.insertarProducto
     @moneda = 'USD',
     @fecha = '2025-03-02';
 
---4.2. Modificacion
 
+--4.2. Modificacion
 -- 4.2.1 Modificación válida (cambiar precio y moneda)
 EXEC Procedimientos.modificarProducto
     @nombre_producto = 'Café Premium',
@@ -693,6 +802,7 @@ EXEC Procedimientos.modificarProducto
 EXEC Procedimientos.modificarProducto
     @nombre_producto = 'Café Premium',
     @moneda = NULL;
+
 --4.2.11 visualizar las modificaciones
 SELECT * FROM ddbba.Producto;
 
@@ -706,9 +816,116 @@ EXEC Procedimientos.eliminarProducto
 EXEC Procedimientos.eliminarProducto
     @nombre_producto = 'Café Inexistente';
 
--- 4.3.3: Intentar eliminar con un nombre en NULL (debería fallar)
-EXEC Procedimientos.eliminarProducto
-    @nombre_producto = NULL;
+-- 4.3.3: Observar eliminacion
+SELECT * FROM ddbba.Producto;
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+--PRUEBA 5 TABLA PROVEEDORPROVEE
+--5.1. 
+--insertaremos datos de prueba en la tabla 'Producto' y ;Proveedor'
+SET IDENTITY_INSERT ddbba.Producto ON;
+
+INSERT INTO ddbba.Producto (id_producto,nombre_producto,precio_unitario,linea,precio_referencia,unidad,cantidadPorUnidad,moneda,fecha)
+ VALUES (2,'Café', 150.00, 'Bebidas', 130.00,'Kg',1,  'USD',  '2020-03-02'),
+		(1,'Café Premium', 150.00, 'Bebidas', 130.00,'Kg',1,  'USD',  '2020-03-02');
+
+SET IDENTITY_INSERT ddbba.Producto OFF;
+
+SET IDENTITY_INSERT ddbba.Proveedor ON;
+
+ INSERT INTO ddbba.Proveedor (id_proveedor,nombre)
+ VALUES	(2,'Georgalo'),
+		(1,'Nestle');
+
+ SET IDENTITY_INSERT ddbba.Proveedor OFF;
+
+-- 5.1.1: Insertar un proveedor y producto válidos
+EXEC Procedimientos.insertarProveedorProvee 
+@id_proveedor = 1, 
+@id_producto = 1;
+
+-- 5.1.2: Intentar insertar un proveedor que no existe
+EXEC Procedimientos.insertarProveedorProvee 
+@id_proveedor = 999, 
+@id_producto = 10;
+
+-- 5.1.3: Intentar insertar un producto que no existe
+EXEC Procedimientos.insertarProveedorProvee 
+@id_proveedor = 1, 
+@id_producto = 999;
+
+-- 5.1.4: Intentar insertar un proveedor con un producto que ya existe en la tabla ProveedorProvee
+EXEC Procedimientos.insertarProveedorProvee 
+@id_proveedor = 1, 
+@id_producto = 1;
+
+-- 5.1.5: Insertar otro proveedor con el mismo producto (para verificar que no haya restricciones indebidas)
+EXEC Procedimientos.insertarProveedorProvee 
+@id_proveedor = 2, 
+@id_producto = 1;
+
+-- 5.1.6: Insertar el mismo proveedor con otro producto (para verificar que un proveedor pueda proveer varios productos)
+EXEC Procedimientos.insertarProveedorProvee 
+@id_proveedor = 1, 
+@id_producto = 2;
+
+--5.1.7 visualizar
+select * from ddbba.ProveedorProvee
+
+
+--5.2. Modificacion
+-- 5.2.1 Modificar proveedor y producto existentes con nuevos valores válidos
+EXEC Procedimientos.modificarProveedorProvee 
+    @id_proveedor = 2, @id_producto = 1, 
+    @nuevo_id_proveedor = 2, @nuevo_id_producto = 2;
+
+-- 5.2.2: Intentar modificar una relación que no existe
+EXEC Procedimientos.modificarProveedorProvee 
+    @id_proveedor = 999, @id_producto = 999, 
+    @nuevo_id_proveedor = 2, @nuevo_id_producto = 11;
+
+-- 5.2.3: Modificar solo el proveedor que no existe
+EXEC Procedimientos.modificarProveedorProvee 
+    @id_proveedor = 1, @id_producto = 1, 
+    @nuevo_id_proveedor = 3;
+
+-- 5.2.4: Modificar solo el producto que no existe
+EXEC Procedimientos.modificarProveedorProvee 
+    @id_proveedor = 1, @id_producto = 1, 
+    @nuevo_id_producto = 12;
+
+-- 5.2.5: No modificar nada (misma relación sin cambios, solo para verificar que no falle)
+EXEC Procedimientos.modificarProveedorProvee 
+    @id_proveedor = 1, @id_producto = 1;
+
+--5.2.6 visualizar cambios
+select * from ddbba.Proveedorprovee
+
+
+--5.3. Eliminacion
+-- 5.3.1: Eliminar una relación proveedor-producto existente
+EXEC Procedimientos.eliminarProveedorProvee 
+    @id_proveedor = 1, @id_producto = 1;
+
+-- 5.3.2: Intentar eliminar una relación que no existe
+EXEC Procedimientos.eliminarProveedorProvee 
+    @id_proveedor = 999, @id_producto = 999;
+
+-- 5.3.3: Intentar eliminar un proveedor con un producto inexistente
+EXEC Procedimientos.eliminarProveedorProvee 
+    @id_proveedor = 1, @id_producto = 999;
+
+-- 5.3.4: Intentar eliminar un producto con un proveedor inexistente
+EXEC Procedimientos.eliminarProveedorProvee 
+    @id_proveedor = 999, @id_producto = 10;
+
+-- 5.3.5: Intentar eliminar la misma relación dos veces 
+EXEC Procedimientos.eliminarProveedorProvee 
+    @id_proveedor = 1, @id_producto = 1;
+
+
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -723,20 +940,6 @@ EXEC ddbba.insertarProveedor
 	'peperino'; --debe dar error de existencia
 SELECT * FROM ddbba.Proveedor WHERE nombre = 'Peperino'; --observe que el proveedor fue agregado exitosamente
 
-
-
-
--- prueba para SP insertarProvee, Ejecute los siguientes juegos de prueba y  luego el SELECT para ver los resultados
--- datos invalidos
-EXEC ddbba.insertarProvee
-	90000,90000 --debe dar error el proveedor
-EXEC ddbba.insertarProvee
-	1,90000 --debe dar error el producuto
-EXEC ddbba.insertarProvee
-	1,1 --debe insertarse los datos correctamente
-EXEC ddbba.insertarProvee
-	1,1 --debe decir que los datos ya existen
-SELECT * FROM ddbba.Provee WHERE id_producto = 1 AND id_proveedor = 1; --observe que los datos fueron agregado exitosamente
 
 
 --prueba para SP insertarCliente, Ejecute los siguientes juegos de prueba y  luego el SELECT para ver los resultados

@@ -840,7 +840,7 @@ BEGIN
 		RETURN;
 	END;
 
-INSERT INTO ddbba.Proveedor_provee(id_proveedor,id_producto) VALUES (@id_proveedor,@id_producto);
+INSERT INTO ddbba.ProveedorProvee(id_proveedor,id_producto) VALUES (@id_proveedor,@id_producto);
 PRINT 'Valores insertados correctamente'
 END;
 go
