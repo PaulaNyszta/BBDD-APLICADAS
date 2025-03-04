@@ -968,14 +968,13 @@ BEGIN
 		RETURN;
 	END;
 
-INSERT INTO ddbba.Proveedor_provee(id_proveedor,id_producto) VALUES (@id_proveedor,@id_producto);
+INSERT INTO ddbba.ProveedorProvee(id_proveedor,id_producto) VALUES (@id_proveedor,@id_producto);
 PRINT 'Valores insertados correctamente'
 END;
 go
 
 
---SP PARA INSERTAR NOTA CREDITO
-IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarNotaCredito')
+
 
 --modificacion
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'modificarProveedorProvee')
@@ -984,7 +983,75 @@ BEGIN
     DROP PROCEDURE Procedimientos.modificarProveedorProvee;
 END;
 GO
+CREATE PROCEDURE Procedimientos.modificarProveedorProvee
+    @id_proveedor INT,
+    @id_producto INT,
+    @nuevo_id_proveedor INT = NULL,
+    @nuevo_id_producto INT = NULL
+AS
+BEGIN
+    -- Validación: Verificar si la relación proveedor-producto existe
+    IF NOT EXISTS (SELECT 1 FROM ddbba.ProveedorProvee WHERE id_proveedor = @id_proveedor AND id_producto = @id_producto)
+    BEGIN
+        PRINT 'Error: La relación proveedor-producto no existe.';
+        RETURN;
+    END;
 
+    -- Verificar que el nuevo proveedor (si se proporciona) exista
+    IF @nuevo_id_proveedor IS NOT NULL AND NOT EXISTS (SELECT 1 FROM ddbba.Proveedor WHERE id_proveedor = @nuevo_id_proveedor)
+    BEGIN
+        PRINT 'Error: El nuevo proveedor no existe.';
+        RETURN;
+    END;
+
+    -- Verificar que el nuevo producto (si se proporciona) exista
+    IF @nuevo_id_producto IS NOT NULL AND NOT EXISTS (SELECT 1 FROM ddbba.Producto WHERE id_producto = @nuevo_id_producto)
+    BEGIN
+        PRINT 'Error: El nuevo producto no existe.';
+        RETURN;
+    END;
+
+    -- Actualizar la relación proveedor-producto con los nuevos valores (si se proporcionan)
+    UPDATE ddbba.ProveedorProvee
+    SET 
+        id_proveedor = ISNULL(@nuevo_id_proveedor, id_proveedor),
+        id_producto = ISNULL(@nuevo_id_producto, id_producto)
+    WHERE id_proveedor = @id_proveedor AND id_producto = @id_producto;
+
+    PRINT 'Relación proveedor-producto modificada correctamente';
+END;
+GO
+--eliminacion
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'eliminarProveedorProvee')
+BEGIN
+    DROP PROCEDURE Procedimientos.eliminarProveedorProvee;
+END;
+GO
+CREATE PROCEDURE Procedimientos.eliminarProveedorProvee
+    @id_proveedor INT,
+    @id_producto INT
+AS
+BEGIN
+    -- Validación: Verificar si la relación proveedor-producto existe
+    IF NOT EXISTS (SELECT 1 FROM ddbba.ProveedorProvee WHERE id_proveedor = @id_proveedor AND id_producto = @id_producto)
+    BEGIN
+        PRINT 'Error: La relación proveedor-producto no existe.';
+        RETURN;
+    END;
+
+    -- Eliminar la relación proveedor-producto
+    DELETE FROM ddbba.ProveedorProvee WHERE id_proveedor = @id_proveedor AND id_producto = @id_producto;
+
+    PRINT 'Relación proveedor-producto eliminada correctamente';
+END;
+GO
+
+--SP PARA INSERTAR NOTA CREDITO
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarNotaCredito')
+BEGIN
+    DROP PROCEDURE Procedimientos.insertarNotaCredito;
+END;
+GO
 
 CREATE PROCEDURE Procedimientos.insertarNotaCredito(
 	@fecha_emision DATETIME,
@@ -1062,6 +1129,21 @@ BEGIN
 		RETURN;
 	END;
 
+	-- Verificacion de cantidad
+	IF @cantidad < 0
+	BEGIN
+		PRINT 'Error: la cantidad no puede ser negativa';
+		RETURN;
+	END;
+
+	-- Verificacion de Monto
+	IF @monto < 0
+	BEGIN
+		PRINT 'Error: El monto no puede ser negativo';
+		RETURN;
+	END;
+
+
 	-- Inserción de datos
 	INSERT INTO ddbba.NotaCredito (fecha_emision, dni_cliente, id_factura, nombre_producto, precio_unitario, cantidad, monto)
 	VALUES (@fecha_emision, @dni_cliente, @id_factura, @nombre_producto, @precio_unitario, @cantidad, @monto);
@@ -1069,70 +1151,6 @@ BEGIN
 	PRINT 'Valores insertados correctamente.';
 END;
 GO
-
-CREATE PROCEDURE Procedimientos.modificarProveedorProvee
-    @id_proveedor INT,
-    @id_producto INT,
-    @nuevo_id_proveedor INT = NULL,
-    @nuevo_id_producto INT = NULL
-AS
-BEGIN
-    -- Validación: Verificar si la relación proveedor-producto existe
-    IF NOT EXISTS (SELECT 1 FROM ddbba.ProveedorProvee WHERE id_proveedor = @id_proveedor AND id_producto = @id_producto)
-    BEGIN
-        PRINT 'Error: La relación proveedor-producto no existe.';
-        RETURN;
-    END;
-
-    -- Verificar que el nuevo proveedor (si se proporciona) exista
-    IF @nuevo_id_proveedor IS NOT NULL AND NOT EXISTS (SELECT 1 FROM ddbba.Proveedor WHERE id_proveedor = @nuevo_id_proveedor)
-    BEGIN
-        PRINT 'Error: El nuevo proveedor no existe.';
-        RETURN;
-    END;
-
-    -- Verificar que el nuevo producto (si se proporciona) exista
-    IF @nuevo_id_producto IS NOT NULL AND NOT EXISTS (SELECT 1 FROM ddbba.Producto WHERE id_producto = @nuevo_id_producto)
-    BEGIN
-        PRINT 'Error: El nuevo producto no existe.';
-        RETURN;
-    END;
-
-    -- Actualizar la relación proveedor-producto con los nuevos valores (si se proporcionan)
-    UPDATE ddbba.ProveedorProvee
-    SET 
-        id_proveedor = ISNULL(@nuevo_id_proveedor, id_proveedor),
-        id_producto = ISNULL(@nuevo_id_producto, id_producto)
-    WHERE id_proveedor = @id_proveedor AND id_producto = @id_producto;
-
-    PRINT 'Relación proveedor-producto modificada correctamente';
-END;
-GO
---eliminacion
-IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'eliminarProveedorProvee')
-BEGIN
-    DROP PROCEDURE Procedimientos.eliminarProveedorProvee;
-END;
-GO
-CREATE PROCEDURE Procedimientos.eliminarProveedorProvee
-    @id_proveedor INT,
-    @id_producto INT
-AS
-BEGIN
-    -- Validación: Verificar si la relación proveedor-producto existe
-    IF NOT EXISTS (SELECT 1 FROM ddbba.ProveedorProvee WHERE id_proveedor = @id_proveedor AND id_producto = @id_producto)
-    BEGIN
-        PRINT 'Error: La relación proveedor-producto no existe.';
-        RETURN;
-    END;
-
-    -- Eliminar la relación proveedor-producto
-    DELETE FROM ddbba.ProveedorProvee WHERE id_proveedor = @id_proveedor AND id_producto = @id_producto;
-
-    PRINT 'Relación proveedor-producto eliminada correctamente';
-END;
-GO
-
 
 -- SP PARA MODIFICAR NOTA CREDITO
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'modificarNotaCredito')
@@ -1230,6 +1248,20 @@ BEGIN
 		RETURN;
 	END;
 
+	-- Verificacion de cantidad
+	IF @cantidad < 0
+	BEGIN
+		PRINT 'Error: la cantidad no puede ser negativa';
+		RETURN;
+	END;
+
+	-- Verificacion de Monto
+	IF @monto < 0
+	BEGIN
+		PRINT 'Error: El monto no puede ser negativo';
+		RETURN;
+	END;
+
 	-- Modificación de los datos
 	UPDATE ddbba.NotaCredito
 	SET fecha_emision = @fecha_emision,
@@ -1244,6 +1276,40 @@ BEGIN
 	PRINT 'Nota de Crédito modificada correctamente.';
 END;
 GO
+
+-- SP PARA ELIMINAR NOTA DE CRÉDITO
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'eliminarNotaCredito')
+BEGIN
+	DROP PROCEDURE Procedimientos.eliminarNotaCredito;
+END;
+GO
+
+CREATE PROCEDURE Procedimientos.eliminarNotaCredito(
+	@id_nota_credito INT -- ID de la Nota de Crédito a eliminar
+)
+AS
+BEGIN
+	-- Validación de NULL
+	IF @id_nota_credito IS NULL
+	BEGIN
+		PRINT 'Error: El ID de la Nota de Crédito no puede ser nulo.';
+		RETURN;
+	END;
+
+	-- Verificación de existencia de la Nota de Crédito
+	IF NOT EXISTS (SELECT 1 FROM ddbba.NotaCredito WHERE id_nota_credito = @id_nota_credito)
+	BEGIN
+		PRINT 'Error: No existe la Nota de Crédito con ese ID.';
+		RETURN;
+	END;
+
+	-- Eliminación de la Nota de Crédito
+	DELETE FROM ddbba.NotaCredito WHERE id_nota_credito = @id_nota_credito;
+
+	PRINT 'Nota de Crédito eliminada correctamente.';
+END;
+GO
+
 
 
 -- SP PARA INSERTAR MEDIO DE PAGO
@@ -1403,10 +1469,6 @@ GO
 
 
 
-END;
-go
-
-
 --SP PARA SUCURSAL
 --insercion
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarSucursal')
@@ -1534,7 +1596,7 @@ CREATE PROCEDURE Procedimientos.insertarProveedor
 AS
 BEGIN
         -- Validar que el nombre no sea nulo 
-        IF (@nombre IS NULL)
+        IF (@nombre IS NULL OR @nombre = ' ')
         BEGIN
             PRINT 'El nombre del proveedor no puede ser nulo.'
             RETURN; 
@@ -1621,11 +1683,8 @@ BEGIN
 END;
 go
 
-
---SP PARA Producto_Solicitado
-=======
 --SP PARA ProductoSolicitado
->>>>>>> 525792da50abb34a40ebfd1792abcfbba5602ebf
+
 IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarProducto_Solicitado')
 BEGIN
     DROP PROCEDURE Procedimientos.insertarProductoSolicitado;
@@ -1692,7 +1751,7 @@ BEGIN
 END;
 go
 
-<<<<<<< HEAD
+
 -- SP PARA MODIFICAR Producto_Solicitado
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'modificarProductoSolicitado')
 BEGIN
@@ -1813,106 +1872,5 @@ BEGIN
     PRINT 'Producto solicitado eliminado correctamente';
 END;
 go
-=======
---SP PARA NOTA CREDITO
-IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarNotaCredito')
-BEGIN
-	DROP PROCEDURE Procedimientos.insertarNotaCredito;
-END;
-go
-CREATE PROCEDURE Procedimientos.insertarNotaCredito(
-		@id_empleado INT,
-		@id_factura CHAR(12),
-		@cantidadADevolver int, --cantidad de unidades a devolver
-		@motivo VARCHAR(255) --descripcion de porque se va a realizar la devolucion
-
-)
-AS
-BEGIN
-		--verificacion de los parametros de entrada
-		--verificar que existe el id_factura
-		IF NOT EXISTS (SELECT 1 FROM ddbba.Pedido WHERE @id_factura=id_factura)
-		BEGIN
-			PRINT 'NO EXISTE LA FACTURA INGRESADA';
-			RETURN;
-		END;
-		--verificar que existe el id_empleado
-		IF NOT EXISTS (SELECT 1 FROM ddbba.Empleado WHERE @id_empleado=id_empleado)
-		BEGIN
-			PRINT 'NO EXISTE EL EMPLEADO INGRESADO';
-			RETURN;
-		END;
-
-	DECLARE @estado_factura VARCHAR(10);
-	DECLARE @cargo VARCHAR(50);
-
-	-- Verificar si la factura está pagada
-	SELECT @estado_factura = estado_factura
-	FROM ddbba.Pedido
-	WHERE id_factura = @id_factura;
-
-	IF @estado_factura <> 'Pagado' 
-	BEGIN
-		PRINT 'Error: La nota de crédito solo puede generarse para facturas pagadas.';
-		RETURN;
-	END;
-
-	-- Verificar si el empleado es un Supervisor
-	SELECT @cargo = cargo 
-	FROM ddbba.Empleado
-	WHERE id_empleado = @id_empleado;
-
-	IF @cargo <> 'Supervisor'
-	BEGIN
-		PRINT 'Error: Solo los supervisores pueden generar notas de crédito.';
-		RETURN;
-	END;
-
-		--generar fecha actual
-		DECLARE @fecha_emision DATETIME;
-		SET @fecha_emision = GETDATE();
-
-		--busco dni_cliente
-		DECLARE @dni_cliente INT;
-		SELECT @dni_cliente=dni_cliente FROM ddbba.Pedido Ped WHERE Ped.id_factura=@id_factura;
-
-		--nombre del producto
-		DECLARE @nombre_producto VARCHAR(100);
-		SELECT  @nombre_producto=nombre_producto
-		FROM ddbba.Producto P
-		INNER JOIN ddbba.ProductoSolicitado PS ON P.id_producto=PS.id_producto
-		WHERE @id_factura=PS.id_factura;
-
-		--precio del producto
-		DECLARE @precio_unitario DECIMAL(10,2);
-		SELECT  @precio_unitario=precio_unitario
-		FROM ddbba.Producto P
-		INNER JOIN ddbba.ProductoSolicitado PS ON P.id_producto=PS.id_producto
-		WHERE @id_factura=PS.id_factura;
-
-		--cantidad
-		DECLARE @cantidad INT;
-		SELECT  @cantidad=cantidad
-		FROM ddbba.ProductoSolicitado PS
-		WHERE @id_factura=PS.id_factura;
-
-			--verificacion que la cantidad a devolver no sea mayor a la pagada
-			IF @cantidadADevolver > @cantidad
-				BEGIN
-			PRINT 'La cantidad no puede mayor a la pagada';
-			RETURN;
-				END;
-		--monto
-		DECLARE @monto DECIMAL(10,2);
-		SET  @monto = (@cantidad*@precio_unitario);
 
 
-
-	
-
-INSERT INTO ddbba.NotaCredito(fecha_emision,dni_cliente,id_factura,nombre_producto,precio_unitario, cantidad,monto,cantidadADevolver,motivo)
-VALUES (@fecha_emision,@dni_cliente,@id_factura,@nombre_producto,@precio_unitario, @cantidad,@monto,@cantidadADevolver,@motivo);
-PRINT 'Valores insertados correctamente'
-END;
-go
->>>>>>> 525792da50abb34a40ebfd1792abcfbba5602ebf
