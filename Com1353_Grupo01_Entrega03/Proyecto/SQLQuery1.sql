@@ -1,5 +1,6 @@
 -- 1. SCRIPT DE CREACION - 28/02/2025 - Com 1353 - Grupo 01 - Base de Datos Aplicadas, BARRIONUEVO LUCIANO [45429539], NYSZTA PAULA [45129511].
---En este Script se incluiran todos los Store Procedures, Triggers y Tablas que deben crearse para la ultilizacion posterior
+--En este Script se incluiran todos los Store Procedures y Tablas que deben crearse para la ultilizacion posterior
+
 
 --Crea la Base de datos
 IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'Com1353G01')
@@ -17,7 +18,6 @@ IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'ddbba')
 		PRINT ' Schema creado exitosamente';
 	END;
 go
-
 --Creacion de las tablas 
 --TABLA SUCURSAL
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'Com1353G01.ddbba.Sucursal') AND type = N'U') -- 'U' tabla creada por el usuario 'N' es q sea unicode
@@ -199,9 +199,9 @@ BEGIN
 		id_factura CHAR(12),
 		nombre_producto VARCHAR(100),
 	    precio_unitario DECIMAL(10,2),
-		cantidad INT,
+		cantidad INT, --cantidad del pedido
 		monto DECIMAL (10,2),
-		cantidadADevolver int,
+		cantidadADevolver int, --cantidad de devolucion
 		motivo Varchar(255)
 	    CONSTRAINT FKNotaCredito2 FOREIGN KEY (id_factura) REFERENCES ddbba.Pedido(id_factura),
 	    CONSTRAINT FKNotaCredito3 FOREIGN KEY (dni_cliente) REFERENCES ddbba.Cliente(dni_cliente)
@@ -228,7 +228,7 @@ BEGIN
 END;
 GO
 CREATE PROCEDURE Procedimientos.insertarCliente
-    @dni CHAR(8),
+    @dni CHAR(9),
     @genero VARCHAR(50),
     @tipo VARCHAR(10),
     @apellido VARCHAR(50),
@@ -252,11 +252,15 @@ BEGIN
     END;
 
     -- Validación de que el DNI tenga 8 dígitos
-    IF LEN(@dni) <> 8 
+    IF LEN(@dni) < 8 or LEN(@dni) > 8
     BEGIN
         PRINT 'Error: El DNI debe ser de 8 dígitos';
         RETURN;
-    END;
+    END
+	ELSE
+	BEGIN
+		SET @dni = CAST(@dni AS CHAR(8));
+	END;
 
     -- Validación de género
     IF @genero NOT IN ('Female', 'Male')
@@ -294,7 +298,7 @@ BEGIN
 END;
 GO
 CREATE PROCEDURE Procedimientos.modificarCliente
-    @dni CHAR(8),
+    @dni CHAR(9),
     @genero VARCHAR(50),
     @tipo VARCHAR(10),
     @apellido VARCHAR(50),
@@ -322,7 +326,11 @@ BEGIN
     BEGIN
         PRINT 'Error: El DNI debe ser de 8 dígitos';
         RETURN;
-    END;
+    END
+	ELSE
+	BEGIN
+		SET @dni = cast(@dni as char(8));
+	END;
 
     -- Validación de género
     IF @genero NOT IN ('Female', 'Male')
@@ -364,7 +372,7 @@ BEGIN
 END;
 GO
 CREATE PROCEDURE Procedimientos.eliminarCliente
-    @dni CHAR(8)
+    @dni CHAR(9)
 AS
 BEGIN
     -- Validación de que el DNI no sea NULL
@@ -379,7 +387,10 @@ BEGIN
     BEGIN
         PRINT 'Error: El DNI debe tener 8 dígitos';
         RETURN;
-    END;
+    END
+	BEGIN
+		SET	@dni = cast(@dni as char(8));
+	END;
 
     -- Verificar si el cliente existe
     IF NOT EXISTS (SELECT 1 FROM ddbba.Cliente WHERE dni_cliente = @dni)
@@ -847,7 +858,8 @@ BEGIN
 END;
 GO
 CREATE PROCEDURE Procedimientos.modificarProducto
-    @nombre_producto VARCHAR(100),
+	@id_producto int,
+    @nombre_producto VARCHAR(100) = NULL,
     @precio_unitario DECIMAL(10,2) = NULL,
     @linea VARCHAR(50) = NULL,
     @precio_referencia DECIMAL(10,2) = NULL,
@@ -858,7 +870,7 @@ CREATE PROCEDURE Procedimientos.modificarProducto
 AS
 BEGIN
     -- Validación: Verificar si el producto existe
-    IF NOT EXISTS (SELECT 1 FROM ddbba.Producto WHERE nombre_producto = @nombre_producto)
+    IF NOT EXISTS (SELECT 1 FROM ddbba.Producto WHERE id_producto = @id_producto)
     BEGIN
         PRINT 'Error: El producto no existe';
         RETURN;
@@ -895,6 +907,7 @@ BEGIN
     -- Actualización del producto
     UPDATE ddbba.Producto
     SET 
+		nombre_producto = ISNULL(@nombre_producto,nombre_producto),
         precio_unitario = ISNULL(@precio_unitario, precio_unitario),
         linea = ISNULL(@linea, linea),
         precio_referencia = ISNULL(@precio_referencia, precio_referencia),
@@ -902,7 +915,7 @@ BEGIN
         cantidadPorUnidad = ISNULL(@cantidadPorUnidad, cantidadPorUnidad),
         moneda = ISNULL(@moneda, moneda),
         fecha = ISNULL(@fecha, fecha)
-    WHERE nombre_producto = @nombre_producto;
+    WHERE id_producto = @id_producto;
 
     PRINT 'Producto modificado correctamente';
 END;
@@ -914,18 +927,18 @@ BEGIN
 END;
 GO
 CREATE PROCEDURE Procedimientos.eliminarProducto
-    @nombre_producto VARCHAR(100)
+    @id_producto int
 AS
 BEGIN
     -- Validación: Verificar si el producto existe
-    IF NOT EXISTS (SELECT 1 FROM ddbba.Producto WHERE nombre_producto = @nombre_producto)
+    IF NOT EXISTS (SELECT 1 FROM ddbba.Producto WHERE id_producto = @id_producto)
     BEGIN
         PRINT 'Error: El producto no existe';
         RETURN;
     END;
 
     -- Eliminación del producto
-    DELETE FROM ddbba.Producto WHERE nombre_producto = @nombre_producto;
+    DELETE FROM ddbba.Producto WHERE id_producto = @id_producto;
 
     PRINT 'Producto eliminado correctamente';
 END;
@@ -933,7 +946,7 @@ GO
 
 --SP PARA PROVEEDOR_PROVEE--------------------------------------------------------------------
 --insercion-
-IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarProveedor_provee')
+IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarProveedorProvee')
 BEGIN
 	DROP PROCEDURE Procedimientos.insertarProveedorProvee;
 END;
@@ -1043,103 +1056,109 @@ BEGIN
 END;
 GO
 CREATE PROCEDURE Procedimientos.insertarNotaCredito(
-	@fecha_emision DATETIME,
-	@dni_cliente CHAR(8),
+	@id_empleado INT,
 	@id_factura CHAR(12),
-	@nombre_producto VARCHAR(100),
-	@precio_unitario DECIMAL(10,2),
-	@cantidad INT,
-	@monto DECIMAL(10,2)
+	@cantidadADevolver int, --cantidad de unidades a devolver
+	@motivo VARCHAR(255) --descripcion de porque se va a realizar la devolucion
+
 )
 AS
 BEGIN
-	-- Validaciones de NULL
-	IF @fecha_emision IS NULL
+	
+	--verificar que existe el id_factura
+		IF NOT EXISTS (SELECT 1 FROM ddbba.Pedido WHERE @id_factura=id_factura)
+		BEGIN
+			PRINT 'NO EXISTE LA FACTURA INGRESADA';
+			RETURN;
+		END;
+		--verificar que existe el id_empleado
+		IF NOT EXISTS (SELECT 1 FROM ddbba.Empleado WHERE @id_empleado=id_empleado)
+		BEGIN
+			PRINT 'NO EXISTE EL EMPLEADO INGRESADO';
+			RETURN;
+		END;
+
+	DECLARE @estado_factura VARCHAR(10);
+	DECLARE @cargo VARCHAR(50);
+
+	-- Verificar si la factura está pagada
+	SELECT @estado_factura = estado_factura
+	FROM ddbba.Pedido
+	WHERE id_factura = @id_factura;
+
+	IF @estado_factura <> 'Pagado' 
 	BEGIN
-		PRINT 'Error: La fecha de emisión no puede ser nula.';
-		RETURN;
-	END;
-	IF @dni_cliente IS NULL
-	BEGIN
-		PRINT 'Error: El DNI del cliente no puede ser nulo.';
-		RETURN;
-	END;
-	IF @id_factura IS NULL
-	BEGIN
-		PRINT 'Error: El ID de la factura no puede ser nulo.';
-		RETURN;
-	END;
-	IF @nombre_producto IS NULL
-	BEGIN
-		PRINT 'Error: El nombre del producto no puede ser nulo.';
-		RETURN;
-	END;
-	IF @precio_unitario IS NULL
-	BEGIN
-		PRINT 'Error: El precio unitario no puede ser nulo.';
-		RETURN;
-	END;
-	IF @cantidad IS NULL
-	BEGIN
-		PRINT 'Error: La cantidad no puede ser nula.';
-		RETURN;
-	END;
-	IF @monto IS NULL
-	BEGIN
-		PRINT 'Error: El monto no puede ser nulo.';
+		PRINT 'Error: La nota de crédito solo puede generarse para facturas pagadas.';
 		RETURN;
 	END;
 
-	-- Validación de que la fecha no sea futura
-	IF @fecha_emision > GETDATE()
+	-- Verificar si el empleado es un Supervisor
+	SELECT @cargo = cargo 
+	FROM ddbba.Empleado
+	WHERE id_empleado = @id_empleado;
+
+	IF @cargo <> 'Supervisor'
 	BEGIN
-		PRINT 'Error: La fecha de emisión no puede ser futura.';
+		PRINT 'Error: Solo los supervisores pueden generar notas de crédito.';
 		RETURN;
 	END;
 
-	-- Verificación de existencia del cliente
-	IF NOT EXISTS (SELECT 1 FROM ddbba.Cliente WHERE dni_cliente = @dni_cliente)
-	BEGIN
-		PRINT 'Error: No existe el cliente.';
-		RETURN;
-	END;
+		--generar fecha actual
+		DECLARE @fecha_emision DATETIME;
+		SET @fecha_emision = GETDATE();
 
-	-- Verificación de existencia de la factura
-	IF NOT EXISTS (SELECT 1 FROM ddbba.Pedido WHERE id_factura = @id_factura)
-	BEGIN
-		PRINT 'Error: No existe la factura.';
-		RETURN;
-	END;
+		--busco dni_cliente
+		DECLARE @dni_cliente INT;
+		SELECT @dni_cliente=dni_cliente FROM ddbba.Pedido Ped WHERE Ped.id_factura=@id_factura;
 
-	-- Verificación de existencia del producto
-	IF NOT EXISTS (SELECT 1 FROM ddbba.Producto WHERE nombre_producto = @nombre_producto)
-	BEGIN
-		PRINT 'Error: No existe el producto.';
-		RETURN;
-	END;
+		--nombre del producto
+		DECLARE @nombre_producto VARCHAR(100);
+		SELECT  @nombre_producto=nombre_producto
+		FROM ddbba.Producto P
+		INNER JOIN ddbba.ProductoSolicitado PS ON P.id_producto=PS.id_producto
+		WHERE @id_factura=PS.id_factura;
 
-	-- Verificacion de cantidad
-	IF @cantidad < 0
-	BEGIN
-		PRINT 'Error: la cantidad no puede ser negativa';
-		RETURN;
-	END;
+		--precio del producto
+		DECLARE @precio_unitario DECIMAL(10,2);
+		SELECT  @precio_unitario=precio_unitario
+		FROM ddbba.Producto P
+		INNER JOIN ddbba.ProductoSolicitado PS ON P.id_producto=PS.id_producto
+		WHERE @id_factura=PS.id_factura;
 
-	-- Verificacion de Monto
-	IF @monto < 0
-	BEGIN
-		PRINT 'Error: El monto no puede ser negativo';
-		RETURN;
-	END;
+		--cantidad
+		DECLARE @cantidad INT;
+		SELECT  @cantidad=cantidad
+		FROM ddbba.ProductoSolicitado PS
+		WHERE @id_factura=PS.id_factura;
 
+			--verificacion que la cantidad a devolver no sea mayor a la pagada
+			IF @cantidadADevolver > @cantidad
+			BEGIN
+			PRINT 'La cantidad no puede mayor a la pagada';
+			
+			RETURN;
+			END;
+			--verificacion que la cantidad a devolver no sea negativa nula
+			IF @cantidadADevolver <=0
+				BEGIN
+			PRINT 'La cantidad no puede ser negativa o nula';
+			RETURN;
+				END;
+			--verificar que motivo no sea nulo
+			IF @motivo IS NULL
+			BEGIN
+				PRINT 'El motivo no puede ser nulo';
+				return;
+			END;
+		--monto
+		DECLARE @monto DECIMAL(10,2);
+		SET  @monto = (@cantidad*@precio_unitario);
 
-	-- Inserción de datos
-	INSERT INTO ddbba.NotaCredito (fecha_emision, dni_cliente, id_factura, nombre_producto, precio_unitario, cantidad, monto)
-	VALUES (@fecha_emision, @dni_cliente, @id_factura, @nombre_producto, @precio_unitario, @cantidad, @monto);
-
-	PRINT 'Valores insertados correctamente.';
+INSERT INTO ddbba.NotaCredito(fecha_emision,dni_cliente,id_factura,nombre_producto,precio_unitario, cantidad,monto,cantidadADevolver,motivo)
+VALUES (@fecha_emision,@dni_cliente,@id_factura,@nombre_producto,@precio_unitario, @cantidad,@monto,@cantidadADevolver,@motivo);
+PRINT 'Valores insertados correctamente';
 END;
-GO
+go
 -- SP PARA MODIFICAR NOTA CREDITO
 IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'modificarNotaCredito')
 BEGIN
@@ -1147,117 +1166,84 @@ BEGIN
 END;
 GO
 CREATE PROCEDURE Procedimientos.modificarNotaCredito(
-	@id_nota_credito INT,  -- ID de la Nota de Crédito a modificar
-	@fecha_emision DATETIME,
-	@dni_cliente CHAR(8),
-	@id_factura CHAR(12),
-	@nombre_producto VARCHAR(100),
-	@precio_unitario DECIMAL(10,2),
-	@cantidad INT,
-	@monto DECIMAL(10,2)
+		@id_nota_credito int,
+		@id_empleado INT,
+		@id_factura CHAR(12),
+		@cantidadADevolver int, --cantidad de unidades a devolver
+		@motivo VARCHAR(255) --descripcion de porque se va a realizar la devolucion
+
 )
 AS
 BEGIN
-	-- Validaciones de NULL
-	IF @id_nota_credito IS NULL
+	
+	IF NOT EXISTS (SELECT 1 FROM ddbba.Pedido WHERE @id_factura=id_factura)
+		BEGIN
+			PRINT 'NO EXISTE LA FACTURA INGRESADA';
+			RETURN;
+		END;
+		--verificar que existe el id_empleado
+		IF NOT EXISTS (SELECT 1 FROM ddbba.Empleado WHERE @id_empleado=id_empleado)
+		BEGIN
+			PRINT 'NO EXISTE EL EMPLEADO INGRESADO';
+			RETURN;
+		END;
+
+	DECLARE @estado_factura VARCHAR(10);
+	DECLARE @cargo VARCHAR(50);
+
+	-- Verificar si la factura está pagada
+	SELECT @estado_factura = estado_factura
+	FROM ddbba.Pedido
+	WHERE id_factura = @id_factura;
+
+	IF @estado_factura <> 'Pagado' 
 	BEGIN
-		PRINT 'Error: El ID de la Nota de Crédito no puede ser nulo.';
+		PRINT 'Error: La nota de crédito solo puede modificarse para facturas pagadas.';
 		RETURN;
 	END;
-	IF @fecha_emision IS NULL
+	--verificacion que la cantidad a devolver no sea negativa nula
+			IF @cantidadADevolver <=0
+				BEGIN
+			PRINT 'La cantidad no puede ser negativa o nula';
+			RETURN;
+				END;
+			--verificar que motivo no sea nulo
+			IF @motivo IS NULL
+			BEGIN
+				PRINT 'El motivo no puede ser nulo';
+				return;
+			END;
+	-- Verificar si el empleado es un Supervisor
+	SELECT @cargo = cargo 
+	FROM ddbba.Empleado
+	WHERE id_empleado = @id_empleado;
+
+	IF @cargo <> 'Supervisor'
 	BEGIN
-		PRINT 'Error: La fecha de emisión no puede ser nula.';
-		RETURN;
-	END;
-	IF @dni_cliente IS NULL
-	BEGIN
-		PRINT 'Error: El DNI del cliente no puede ser nulo.';
-		RETURN;
-	END;
-	IF @id_factura IS NULL
-	BEGIN
-		PRINT 'Error: El ID de la factura no puede ser nulo.';
-		RETURN;
-	END;
-	IF @nombre_producto IS NULL
-	BEGIN
-		PRINT 'Error: El nombre del producto no puede ser nulo.';
-		RETURN;
-	END;
-	IF @precio_unitario IS NULL
-	BEGIN
-		PRINT 'Error: El precio unitario no puede ser nulo.';
-		RETURN;
-	END;
-	IF @cantidad IS NULL
-	BEGIN
-		PRINT 'Error: La cantidad no puede ser nula.';
-		RETURN;
-	END;
-	IF @monto IS NULL
-	BEGIN
-		PRINT 'Error: El monto no puede ser nulo.';
+		PRINT 'Error: Solo los supervisores pueden generar notas de crédito.';
 		RETURN;
 	END;
 
-	-- Validación de que la fecha no sea futura
-	IF @fecha_emision > GETDATE()
-	BEGIN
-		PRINT 'Error: La fecha de emisión no puede ser futura.';
-		RETURN;
-	END;
+		
 
-	-- Verificación de existencia de la Nota de Crédito
-	IF NOT EXISTS (SELECT 1 FROM ddbba.NotaCredito WHERE id_nota_credito = @id_nota_credito)
-	BEGIN
-		PRINT 'Error: No existe la Nota de Crédito con ese ID.';
-		RETURN;
-	END;
+		--cantidad
+		DECLARE @cantidad INT;
+		SELECT  @cantidad=cantidad
+		FROM ddbba.ProductoSolicitado PS
+		WHERE @id_factura=PS.id_factura;
 
-	-- Verificación de existencia del cliente
-	IF NOT EXISTS (SELECT 1 FROM ddbba.Cliente WHERE dni_cliente = @dni_cliente)
-	BEGIN
-		PRINT 'Error: No existe el cliente.';
-		RETURN;
-	END;
-
-	-- Verificación de existencia de la factura
-	IF NOT EXISTS (SELECT 1 FROM ddbba.Pedido WHERE id_factura = @id_factura)
-	BEGIN
-		PRINT 'Error: No existe la factura.';
-		RETURN;
-	END;
-
-	-- Verificación de existencia del producto
-	IF NOT EXISTS (SELECT 1 FROM ddbba.Producto WHERE nombre_producto = @nombre_producto)
-	BEGIN
-		PRINT 'Error: No existe el producto.';
-		RETURN;
-	END;
-
-	-- Verificacion de cantidad
-	IF @cantidad < 0
-	BEGIN
-		PRINT 'Error: la cantidad no puede ser negativa';
-		RETURN;
-	END;
-
-	-- Verificacion de Monto
-	IF @monto < 0
-	BEGIN
-		PRINT 'Error: El monto no puede ser negativo';
-		RETURN;
-	END;
+			--verificacion que la cantidad a devolver no sea mayor a la pagada
+			IF @cantidadADevolver > @cantidad
+				BEGIN
+			PRINT 'La cantidad no puede mayor a la pagada';
+			RETURN;
+				END;
 
 	-- Modificación de los datos
 	UPDATE ddbba.NotaCredito
-	SET fecha_emision = @fecha_emision,
-		dni_cliente = @dni_cliente,
-		id_factura = @id_factura,
-		nombre_producto = @nombre_producto,
-		precio_unitario = @precio_unitario,
-		cantidad = @cantidad,
-		monto = @monto
+	SET 
+		cantidadADevolver = @cantidadADevolver,
+		motivo = @motivo
 	WHERE id_nota_credito = @id_nota_credito;
 
 	PRINT 'Nota de Crédito modificada correctamente.';
@@ -1663,7 +1649,7 @@ go
 
 --SP PARA INSERTAR ProductoSolicitado------------------------------------------------------------------
 
-IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarProducto_Solicitado')
+IF  EXISTS (SELECT * FROM sys.procedures WHERE name = 'insertarProductoSolicitado')
 BEGIN
     DROP PROCEDURE Procedimientos.insertarProductoSolicitado;
 END;
@@ -1692,6 +1678,12 @@ BEGIN
         PRINT 'La cantidad no puede ser nula';
         RETURN;
     END;
+	    -- Verificar que la cantidad pedida sea mayor a cero
+    IF (@cantidad <= 0)
+    BEGIN
+        PRINT 'La cantidad debe ser mayor a cero';
+        RETURN;
+    END;
 
     -- Verificar que no se inserten datos duplicados
     IF EXISTS (SELECT 1 FROM ddbba.ProductoSolicitado WHERE id_producto = @id_producto AND @id_factura = id_factura)
@@ -1714,12 +1706,7 @@ BEGIN
         RETURN;
     END;
 
-    -- Verificar que la cantidad pedida sea mayor a cero
-    IF (@cantidad <= 0)
-    BEGIN
-        PRINT 'La cantidad debe ser mayor a cero';
-        RETURN;
-    END;
+
 
     -- Insertar los datos en la tabla
     INSERT INTO ddbba.ProductoSolicitado(id_producto, id_factura, cantidad)
@@ -1852,58 +1839,511 @@ go
 
 
 
---SP PARA SABER LA COTIZACION DEL DOLAR (API)
---generaremos el Store Procedure que se encarga de llamr a una API para saber el valor de la cotizacion del dolar en una fecha en particular
-IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'GetDolarCotizacion') 
-BEGIN
-    DROP PROCEDURE Procedimientos.GetDolarCotizacion;
-END;
+
+--REPORTES
+----------------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------
+
+--Crear el Schema
+IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'Rep')
+	BEGIN
+		EXEC('CREATE SCHEMA Rep');
+		PRINT ' Schema creado exitosamente';
+	END;
 go
-CREATE PROCEDURE Procedimientos.GetDolarCotizacion
-    @fecha VARCHAR(10), -- Formato 'YYYY/MM/DD'
-	@compra FLOAT OUTPUT 
+
+
+--REPORTE Mensual: ingresando un mes y año determinado mostrar el total facturado por días de la semana, incluyendo sábado y domingo.
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Reporte_FacturacionMensual_XML') 
+BEGIN
+    DROP PROCEDURE Rep.Reporte_FacturacionMensual_XML;
+    PRINT 'SP Reporte_FacturacionMensual_XML ya existe -- > se creara nuevamente';
+END;
+GO
+CREATE PROCEDURE Rep.Reporte_FacturacionMensual_XML
+    @Mes INT,
+    @Anio INT
 AS
 BEGIN
-	DECLARE @url NVARCHAR(500), @response NVARCHAR(MAX), @object INT, @status INT;
-    DECLARE @fechaDisponible DATE, @fechaHoy DATE;	
+    -- Valida que se un mes válido
+    IF @Mes > 12 OR @Mes < 1
+    BEGIN
+        PRINT 'Mes inválido';
+        RETURN;
+    END;
 
-    -- Construir la URL de la API
-    SET @url = 'https://api.argentinadatos.com/v1/cotizaciones/dolares/blue/' + @fecha;
+    -- Valida que sea un año válido
+    IF @Anio > YEAR(GETDATE()) OR @Anio < 1800
+    BEGIN
+        PRINT 'Año inválido';
+        RETURN;
+    END;
+    -- Consulta para obtener el total facturado por día de la semana 
+	WITH VentasDelMes as (
+	SELECT ped.fecha_pedido, precio_unitario,cantidad
+	FROM ddbba.Pedido ped
+	INNER JOIN ddbba.ProductoSolicitado ps ON ps.id_factura=ped.id_factura
+	INNER JOIN ddbba.Producto p ON p.id_producto = ps.id_producto
+	WHERE MONTH(ped.fecha_pedido) = @Mes and YEAR(ped.fecha_pedido) = @Anio
+	)
 
-    -- Crear un objeto de solicitud HTTP
-    EXEC @status = sp_OACreate 'MSXML2.XMLHTTP', @object OUT;
-    IF @status <> 0 RAISERROR('Error al crear el objeto HTTP', 16, 1);
+	SELECT DATENAME(WEEKDAY, fecha_pedido) AS DiaSemana, 
+			SUM(precio_unitario*cantidad) as TotalFacturado
+	FROM VentasDelMes
+	GROUP BY DATENAME(WEEKDAY, fecha_pedido)
+    FOR XML PATH('Dia'), ROOT('FacturacionMensual');
+END;
+GO
 
-    -- Abrir la solicitud GET
-    EXEC @status = sp_OAMethod @object, 'open', NULL, 'GET', @url, 'false';
-    IF @status <> 0 RAISERROR('Error al abrir la conexión', 16, 1);
 
-    -- Enviar la solicitud
-    EXEC @status = sp_OAMethod @object, 'send';
-    IF @status <> 0 RAISERROR('Error al enviar la solicitud', 16, 1);
+--Trimestral: mostrar el total facturado por turnos de trabajo por mes.
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'ObtenerFacturacionPorTrimestreXML') 
+BEGIN
+    DROP PROCEDURE Rep.ObtenerFacturacionPorTrimestreXML;
+    PRINT 'SP ObtenerFacturacionPorTrimestreXML ya existe -- > se creara nuevamente';
+END;
+GO
+CREATE PROCEDURE Rep.ObtenerFacturacionPorTrimestreXML
+    @Anio INT,
+    @Trimestre INT
+AS
+BEGIN
+    -- Valida que se un año válido
+    IF @Anio > YEAR(GETDATE()) OR @Anio < 1800
+    BEGIN
+        PRINT 'Año inválido';
+        RETURN;
+    END;
 
-    -- Obtener la respuesta
-    EXEC @status = sp_OAGetProperty @object, 'responseText', @response OUT;
-    IF @status <> 0 RAISERROR('Error al obtener la respuesta', 16, 1);
+    -- Valida que se un trimestre válido
+    IF @Trimestre > 4 OR @Trimestre < 1
+    BEGIN
+        PRINT 'Trimestre inválido';
+        RETURN;
+    END;
 
-    -- Liberar el objeto
-    EXEC sp_OADestroy @object;
+    DECLARE @MesInicio INT, @MesFin INT;
 
-	--guardamos el valor de la compra del dolar
-	SELECT @compra=compra
-		FROM OPENJSON(@response)
-		WITH (
-			casa NVARCHAR(50),
-			compra FLOAT,
-			venta FLOAT,
-			fecha DATE
-		);
+    -- Determinar los meses del trimestre
+    IF @Trimestre = 1
+    BEGIN
+        SET @MesInicio = 1;
+        SET @MesFin = 3;
+    END
+    ELSE IF @Trimestre = 2
+    BEGIN
+        SET @MesInicio = 4;
+        SET @MesFin = 6;
+    END
+    ELSE IF @Trimestre = 3
+    BEGIN
+        SET @MesInicio = 7;
+        SET @MesFin = 9;
+    END
+    ELSE IF @Trimestre = 4
+    BEGIN
+        SET @MesInicio = 10;
+        SET @MesFin = 12;
+    END;
+
+
+    SELECT
+        E.turno AS 'Turno',
+        MONTH(Ped.fecha_pedido) AS 'Mes',
+        SUM(PS.cantidad * Pr.precio_unitario) OVER (PARTITION BY E.turno, MONTH(Ped.fecha_pedido)) AS 'TotalFacturado'
+    FROM
+        ddbba.ProductoSolicitado PS
+    INNER JOIN ddbba.Pedido Ped ON PS.id_factura = Ped.id_factura
+	INNER JOIN ddbba.Empleado E ON E.id_empleado=Ped.id_empleado
+	INNER JOIN ddbba.Producto Pr ON Pr.id_producto=PS.id_producto
+	WHERE YEAR(Ped.fecha_pedido) = @Anio
+        AND MONTH(Ped.fecha_pedido) BETWEEN @MesInicio AND @MesFin
+    ORDER BY
+        E.turno, MONTH(Ped.fecha_pedido) 
+    FOR XML PATH('Factura'), ROOT('Facturas');
+END;
+GO
+
+--REPORTE Por rango de fechas: ingresando un rango de fechas a demanda, debe poder mostrar la cantidad de productos vendidos en ese rango, ordenado de mayor a menor.
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Reporte_ProductosVendidos_XML') 
+BEGIN
+    DROP PROCEDURE Rep.Reporte_ProductosVendidos_XML;
+    PRINT 'SP Reporte_ProductosVendidos_XML ya existe -- > se creara nuevamente';
+END;
+GO
+CREATE PROCEDURE Rep.Reporte_ProductosVendidos_XML
+    @FechaInicio DATE,
+    @FechaFin DATE
+AS
+BEGIN
+    --validar que la fecha de inicio sea más chica que la fecha de fin
+    IF @FechaFin < @FechaInicio
+    BEGIN
+        PRINT 'La fecha de fin debe ser más grande que la fecha de inicio!';
+        RETURN;
+    END;
+  --validar que la fecha ingresada
+    IF @FechaInicio > GETDATE()
+    BEGIN
+        PRINT 'La fecha de inicio no debe ser futura';
+        RETURN;
+    END;
+    --validar que la fecha ingresada
+    IF @FechaFin > GETDATE()
+    BEGIN
+        PRINT 'La fecha de fin no debe ser futura';
+        RETURN;
+    END;
+ 
+    ;WITH ProductoVentas AS (
+        SELECT 
+            P.id_producto,
+            P.nombre_producto,
+            SUM(PS.cantidad) AS CantidadVendida,
+            RANK() OVER (ORDER BY SUM(PS.cantidad) DESC) AS Ranking
+        FROM ddbba.ProductoSolicitado PS
+        INNER JOIN ddbba.Producto P ON PS.id_producto = P.id_producto
+        INNER JOIN ddbba.Pedido Ped ON PS.id_factura = Ped.id_factura
+        WHERE Ped.fecha_pedido BETWEEN @FechaInicio AND @FechaFin
+        GROUP BY P.id_producto, P.nombre_producto
+    )
+    SELECT 
+        id_producto,
+        nombre_producto,
+        CantidadVendida,
+        Ranking
+    FROM ProductoVentas
+    ORDER BY Ranking 
+    FOR XML PATH('Producto'), ROOT('ReporteProductosVendidos');
+END;
+GO
+
+
+--REPORTE Por rango de fechas: ingresando un rango de fechas a demanda, debe poder mostrar la cantidad de productos vendidos en ese rango por sucursal, ordenado de mayor a menor.
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'ObtenerVentasPorRangoFechasXML') 
+BEGIN
+	 DROP PROCEDURE Rep.ObtenerVentasPorRangoFechasXML;
+	 PRINT 'SP ObtenerFacturacionPorTrimestreXML ya existe -- > se creara nuevamente';
+END;
+go
+CREATE PROCEDURE Rep.ObtenerVentasPorRangoFechasXML
+    @FechaInicio DATE,
+    @FechaFin DATE
+AS
+BEGIN
+	--validar que la fecha de inicio sea más chica que la fecha de fin
+    IF @FechaFin < @FechaInicio
+    BEGIN
+        PRINT 'La fecha de fin debe ser más grande que la fecha de inicio!';
+        RETURN;
+    END;
+  --validar que la fecha ingresada
+    IF @FechaInicio > GETDATE()
+    BEGIN
+        PRINT 'La fecha de inicio no debe ser futura';
+        RETURN;
+    END;
+    --validar que la fecha ingresada
+    IF @FechaFin > GETDATE()
+    BEGIN
+        PRINT 'La fecha de fin no debe ser futura';
+        RETURN;
+    END;
+    SELECT 
+        S.localidad AS Sucursal,
+        SUM(PS.cantidad) AS CantidadVendida
+    FROM ddbba.ProductoSolicitado PS
+    INNER JOIN ddbba.Pedido Ped ON PS.id_factura = Ped.id_factura
+    INNER JOIN ddbba.Sucursal S ON Ped.id_sucursal = S.id_sucursal
+
+    WHERE Ped.fecha_pedido BETWEEN @FechaInicio AND @FechaFin
+    GROUP BY S.localidad
+    ORDER BY CantidadVendida DESC
+    FOR XML PATH('Venta'), ROOT('ReporteVentas');
 END;
 go
 
-/*------EJECUTARLO------------------------------------------
-DECLARE @precioCompra FLOAT;
-EXEC Procedimientos.GetDolarCotizacion '2020/01/01', @precioCompra OUTPUT;
-PRINT 'El valor de compra del dólar es: ' + CAST(@precioCompra AS VARCHAR);
-*/
-=======
+
+--REPORTE Mostrar los 5 productos más vendidos en un mes, por semana 
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'ObtenerTopProductosPorSemanaXML') 
+BEGIN
+    DROP PROCEDURE Rep.ObtenerTopProductosPorSemanaXML;
+    PRINT 'SP ObtenerTopProductosPorSemanaXML ya existe -- > se creara nuevamente';
+END;
+GO
+CREATE PROCEDURE Rep.ObtenerTopProductosPorSemanaXML
+     @Mes INT,
+     @Anio INT
+AS
+BEGIN
+    -- Validación del mes
+    IF @Mes > 12 OR @Mes < 1
+    BEGIN
+        PRINT 'Mes inválido';
+        RETURN;
+    END;
+
+    -- Validación del año
+    IF @Anio > YEAR(GETDATE()) OR @Anio < 1800
+    BEGIN
+        PRINT 'Año inválido';
+        RETURN;
+    END;
+
+    WITH Semanas AS (
+        SELECT 
+            DATEPART(WEEK, Ped.fecha_pedido) - DATEPART(WEEK, DATEFROMPARTS(@Anio, @Mes, 1)) + 1 AS Semana, --muestra la semana del mes y no del anio
+            P.id_producto,
+            P.nombre_producto,
+            SUM(PS.cantidad) AS CantidadVendida,
+            RANK() OVER (PARTITION BY DATEPART(WEEK, Ped.fecha_pedido) ORDER BY SUM(PS.cantidad) DESC) AS Ranking
+        FROM ddbba.ProductoSolicitado PS
+        INNER JOIN ddbba.Producto P ON PS.id_producto = P.id_producto
+        INNER JOIN ddbba.Pedido Ped ON PS.id_factura = Ped.id_factura
+        WHERE YEAR(Ped.fecha_pedido) = @Anio
+          AND MONTH(Ped.fecha_pedido) = @Mes
+        GROUP BY DATEPART(WEEK, Ped.fecha_pedido), P.id_producto, P.nombre_producto
+    )
+    SELECT 
+        Semana,
+        id_producto,
+        nombre_producto,
+        CantidadVendida
+    FROM Semanas
+    WHERE Ranking <= 5
+    ORDER BY Semana, Ranking
+    FOR XML PATH('Producto'), ROOT('TopProductos');
+END;
+GO
+
+
+--REPORTE Mostrar los 5 productos menos vendidos en el mes. 
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'ObtenerMenoresProductosDelMesXML') 
+BEGIN
+	 DROP PROCEDURE Rep.ObtenerMenoresProductosDelMesXML;
+	 PRINT 'SP ObtenerMenoresProductosDelMesXML ya existe --> se creará nuevamente';
+END;
+GO
+CREATE PROCEDURE Rep.ObtenerMenoresProductosDelMesXML
+    @Mes INT,
+    @Anio INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Validación del mes
+    IF @Mes > 12 OR @Mes < 1
+    BEGIN
+        PRINT 'Mes inválido';
+        RETURN;
+    END;
+
+    -- Validación del año
+    IF @Anio > YEAR(GETDATE()) OR @Anio < 1800
+    BEGIN
+        PRINT 'Año inválido';
+        RETURN;
+    END;
+
+
+    WITH VentasMes AS (
+        SELECT 
+            P.id_producto,
+            P.nombre_producto,
+            SUM(PS.cantidad) AS CantidadVendida,
+            RANK() OVER (ORDER BY SUM(PS.cantidad) ASC) AS RangoVentas
+        FROM ddbba.ProductoSolicitado PS
+        INNER JOIN ddbba.Producto P ON PS.id_producto = P.id_producto
+        INNER JOIN ddbba.Pedido Ped ON PS.id_factura = Ped.id_factura
+        WHERE YEAR(Ped.fecha_pedido) = @Anio
+          AND MONTH(Ped.fecha_pedido) = @Mes
+        GROUP BY P.id_producto, P.nombre_producto
+    )
+    SELECT 
+        V.id_producto,
+        V.nombre_producto,
+        V.CantidadVendida
+    FROM VentasMes V
+    WHERE V.RangoVentas <= 5 -- Filtra los 5 productos menos vendidos
+    ORDER BY V.CantidadVendida ASC 
+    FOR XML PATH('Producto'), ROOT('BottomProductos');
+END;
+GO
+
+
+--REPORTE Mostrar total acumulado de ventas (o sea también mostrar el detalle) para una fecha y sucursal particulares 
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'ObtenerVentasPorFechaYSucursalXML') 
+BEGIN
+	 DROP PROCEDURE Rep.ObtenerVentasPorFechaYSucursalXML;
+	 PRINT 'SP ObtenerVentasPorFechaYSucursalXML ya existe --> se creará nuevamente';
+END;
+GO
+CREATE PROCEDURE Rep.ObtenerVentasPorFechaYSucursalXML
+    @Fecha DATE,
+    @SucursalID INT
+AS
+BEGIN
+    SET NOCOUNT ON; 
+
+    -- Validar que la sucursal exista
+    IF NOT EXISTS (SELECT 1 FROM ddbba.Sucursal WHERE id_sucursal = @SucursalID)
+    BEGIN
+        PRINT 'Sucursal no existe';
+        RETURN;
+    END;
+
+    -- Obtener detalle de ventas con total acumulado usando Window Functions
+    WITH VentasDetalle AS (
+        SELECT 
+            P.id_producto,
+            P.nombre_producto,
+            SUM(PS.cantidad) AS CantidadVendida,
+            SUM(PS.cantidad * P.precio_unitario) AS TotalVenta,
+            SUM(SUM(PS.cantidad * P.precio_unitario)) OVER()   AS TotalAcumulado -- Total acumulado de la venta
+        FROM ddbba.ProductoSolicitado PS
+        INNER JOIN ddbba.Producto P ON PS.id_producto = P.id_producto
+       INNER JOIN ddbba.Pedido Ped ON PS.id_factura = Ped.id_factura
+        WHERE Ped.fecha_pedido = @Fecha
+          AND Ped.id_sucursal = @SucursalID
+        GROUP BY P.id_producto, P.nombre_producto
+    )
+    
+    SELECT 
+        V.id_producto,
+        V.nombre_producto,
+        V.CantidadVendida,
+        V.TotalVenta,
+        NULL AS TotalAcumulado -- Para diferenciar productos del total acumulado
+    FROM VentasDetalle V
+
+    UNION ALL 
+
+    SELECT 
+        NULL AS id_producto,
+        'Total Acumulado' AS nombre_producto,
+        NULL AS CantidadVendida,
+        NULL AS TotalVenta,
+        MAX(V.TotalAcumulado) AS TotalAcumulado -- Total acumulado en una sola fila
+    FROM VentasDetalle V
+
+   FOR XML PATH('Producto'), ROOT('ReporteVentas');
+END;
+GO
+
+
+--REPORTE Mensual: ingresando un mes y año determinado mostrar el vendedor de mayor monto facturado por sucursal. 
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'Reporte_VendedorTopPorSucursal_XML') 
+BEGIN
+	 DROP PROCEDURE Rep.Reporte_VendedorTopPorSucursal_XML;
+	 PRINT 'SP Reporte_VendedorTopPorSucursal_XML ya existe --> se creará nuevamente';
+END;
+GO
+CREATE PROCEDURE Rep.Reporte_VendedorTopPorSucursal_XML
+    @Mes INT,
+    @Anio INT
+AS
+BEGIN
+    SET NOCOUNT ON; 
+
+    -- Validar mes y año
+    IF @Mes < 1 OR @Mes > 12
+    BEGIN
+        PRINT 'Mes inválido';
+        RETURN;
+    END;
+    
+    IF @Anio < 1800 OR @Anio > YEAR(GETDATE())
+    BEGIN
+        PRINT 'Año inválido';
+        RETURN;
+    END;
+
+    -- Obtener facturación por vendedor y determinar el top 1 por sucursal usando RANK()
+    WITH FacturacionPorVendedor AS (
+        SELECT 
+            E.id_empleado,
+            S.id_sucursal,
+            S.localidad AS LocalidadSucursal,
+            SUM(PS.cantidad * P.precio_unitario) AS TotalFacturado,
+            RANK() OVER (PARTITION BY S.id_sucursal ORDER BY SUM(PS.cantidad * P.precio_unitario) DESC) AS Rnk -- Ordena de mayor a menor dentro de cada sucursal
+        FROM ddbba.Pedido Ped
+		INNER JOIN ddbba.Empleado E ON Ped.id_empleado = E.id_empleado
+		INNER JOIN ddbba.Sucursal S ON Ped.id_sucursal = S.id_sucursal
+        INNER JOIN ddbba.ProductoSolicitado PS ON Ped.id_factura = PS.id_factura
+        INNER JOIN ddbba.Producto P ON PS.id_producto = P.id_producto
+        
+       
+        WHERE MONTH(Ped.fecha_pedido) = @Mes 
+          AND YEAR(Ped.fecha_pedido) = @Anio
+        GROUP BY E.id_empleado, S.id_sucursal, S.localidad
+    )
+
+    -- Seleccionar solo los mejores vendedores (RANK = 1) por sucursal
+    SELECT 
+        FV.id_sucursal AS Id_sucursal,
+        FV.LocalidadSucursal AS Localidad,
+        FV.id_empleado AS LegajoEmpleado,
+        FV.TotalFacturado AS Total_facturado
+    FROM FacturacionPorVendedor FV
+    WHERE FV.Rnk = 1 -- Solo los vendedores top por sucursal
+    FOR XML PATH('Reporte'), ROOT('FacturacionMensual');
+END;
+GO
+
+--TRIGGER DE ENCRIPTACION
+------------------------------------------------------------------------------------------------------------------------------------------------
+--AGREGAR CAMPOS PARA ENCRIPTAR
+
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'ddbba' AND TABLE_NAME = 'Empleado' AND COLUMN_NAME = 'nombre_enc')
+    ALTER TABLE ddbba.Empleado ADD nombre_enc VARBINARY(MAX);
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'ddbba' AND TABLE_NAME = 'Empleado' AND COLUMN_NAME = 'apellido_enc')
+    ALTER TABLE ddbba.Empleado ADD apellido_enc VARBINARY(MAX);
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'ddbba' AND TABLE_NAME = 'Empleado' AND COLUMN_NAME = 'dni_enc')
+    ALTER TABLE ddbba.Empleado ADD dni_enc VARBINARY(MAX);
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'ddbba' AND TABLE_NAME = 'Empleado' AND COLUMN_NAME = 'direccion_enc')
+    ALTER TABLE ddbba.Empleado ADD direccion_enc VARBINARY(MAX);
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'ddbba' AND TABLE_NAME = 'Empleado' AND COLUMN_NAME = 'cuil_enc')
+    ALTER TABLE ddbba.Empleado ADD cuil_enc VARBINARY(MAX);
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'ddbba' AND TABLE_NAME = 'Empleado' AND COLUMN_NAME = 'email_personal_enc')
+    ALTER TABLE ddbba.Empleado ADD email_personal_enc VARBINARY(MAX);
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'ddbba' AND TABLE_NAME = 'Empleado' AND COLUMN_NAME = 'email_empresarial_enc')
+    ALTER TABLE ddbba.Empleado ADD email_empresarial_enc VARBINARY(MAX);
+GO
+
+--TRIGGER PARA QUE CADA VEZ QUE SE INGRESA UN REGISTRO A LA TABLA, LOS DATOS SENSIBLES SON ENCRIPTADOS (SE ENCUENTRA DESACTIVADO)
+IF EXISTS (SELECT 1 FROM sys.triggers WHERE name='trg_Empleado_Encrypt')
+    DROP TRIGGER ddbba.trg_Empleado_Encrypt;
+GO
+CREATE TRIGGER ddbba.trg_Empleado_Encrypt
+ON ddbba.Empleado
+AFTER INSERT
+AS
+BEGIN
+		-- Encriptar y actualizar las columnas encriptadas
+		UPDATE e
+		SET 
+			e.nombre_enc = ENCRYPTBYPASSPHRASE('Xg7#pV@1zK$9mTqW', i.nombre),
+			e.apellido_enc = ENCRYPTBYPASSPHRASE('Xg7#pV@1zK$9mTqW', i.apellido),
+			e.dni_enc = ENCRYPTBYPASSPHRASE('Xg7#pV@1zK$9mTqW', CAST(i.dni AS VARCHAR)),
+			e.direccion_enc = ENCRYPTBYPASSPHRASE('Xg7#pV@1zK$9mTqW', i.direccion),
+			e.cuil_enc = ENCRYPTBYPASSPHRASE('Xg7#pV@1zK$9mTqW', i.cuil),
+			e.email_personal_enc = ENCRYPTBYPASSPHRASE('Xg7#pV@1zK$9mTqW', i.email_personal),
+			e.email_empresarial_enc = ENCRYPTBYPASSPHRASE('Xg7#pV@1zK$9mTqW', i.email_empresarial)
+		FROM ddbba.Empleado e
+		INNER JOIN inserted i ON e.id_empleado = i.id_empleado;
+
+		-- Opcional: Eliminar los datos visibles o ponerlos en NULL (si no se van a necesitar)
+		UPDATE e
+		SET 
+			e.nombre = NULL,
+			e.apellido = NULL,
+			e.dni = NULL,
+			e.direccion = NULL,
+			e.cuil = NULL,
+			e.email_personal = NULL,
+			e.email_empresarial = NULL
+		FROM ddbba.Empleado e
+		INNER JOIN inserted i ON e.id_empleado = i.id_empleado;
+END;
+PRINT 'TRIGGER CREADO CORRECTAMENTE';
+GO

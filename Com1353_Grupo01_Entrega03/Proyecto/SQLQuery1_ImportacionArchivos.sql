@@ -1,6 +1,6 @@
 -- 3. SCRIPT DE IMPORTACION DE DATOS - 28/02/2025 - Com 1353 - Grupo 01 - Base de Datos Aplicadas, BARRIONUEVO LUCIANO [45429539], NYSZTA PAULA [45129511].
 --ATENCION: puede ejecutar el archivo como bloque para crear los SP  y luego ir ejecutandolos de a uno para ver la insercion
---o puede ejecutar todo juntos abajo
+
 Use Com1353G01
 -----------------------------------------------------------------------------------------------------------------------
 --Crear el Schema de impotacion
@@ -19,11 +19,17 @@ BEGIN
 END;
 GO
 CREATE PROCEDURE imp.Importar_ElectronicAccessories
-    @RutaArchivo NVARCHAR(255)
+    @RutaArchivo NVARCHAR(255),
+	@cotizacion decimal(10,2)
 AS
 BEGIN
     SET NOCOUNT ON;
 
+		IF @cotizacion<=0
+		BEGIN
+			PRINT 'La cotizacion no puede ser negativa ni cero';
+			RETURN;
+		END;
     -- Crear tabla temporal para cargar los datos(Para que sea accesible en toda la ejecución del procedimiento, usa una tabla temporal global (##Temp))
 CREATE TABLE ##Temp (
     nombre_producto VARCHAR(100),
@@ -50,27 +56,13 @@ EXEC sp_executesql @SQL;
 	)
 	DELETE FROM CTE WHERE rn > 1;
 
-	select * from ##Temp
 
-/*
-	EXEC sp_configure 'show advanced options', 1;
-RECONFIGURE;
-EXEC sp_configure 'Ole Automation Procedures', 1; --estaba en 0
-RECONFIGURE;
-*/
-
-	--llamaremos a la API 
-	DECLARE @precioDolar FLOAT;
-	EXEC Procedimientos.GetDolarCotizacion '2025/03/04', @precioDolar OUTPUT;
-	PRINT CAST(@precioDolar as varchar)
-
-	--modificaremos los precios que dicen USD
+	--modificaremos los precios que dicen USD con la cotizacion actual
 	UPDATE t
-	SET 
-
-DECLARE @precioCompra FLOAT;
-EXEC Procedimientos.GetDolarCotizacion '2025/03/04', @precioCompra OUTPUT;
-PRINT 'El valor de compra del dólar es: ' + CAST(@precioCompra AS VARCHAR);
+	SET moneda='ARS',
+		precio_unitario = precio_unitario*@cotizacion
+	FROM ##Temp t
+	WHERE moneda = 'USD';
 
 
 
@@ -85,8 +77,8 @@ PRINT 'El valor de compra del dólar es: ' + CAST(@precioCompra AS VARCHAR);
 						'', 
 					moneda, 
 					fecha
-	FROM ##Temp 
-
+	FROM ##Temp tmp
+	WHERE NOT EXISTS (SELECT 1 FROM ddbba.Producto Pr WHERE tmp.nombre_producto=Pr.nombre_producto)
 	-- Eliminar la tabla temporal global después de usarla
 	DROP TABLE ##Temp;
 
@@ -94,22 +86,14 @@ END;
 GO
 
 
-
-INSERT INTO ##Temp (nombre_producto, precio_unitario, moneda)
-SELECT Product, [Precio Unitario en dolares], 'USD'
-FROM OPENROWSET('Microsoft.ACE.OLEDB.12.0',
-    'Excel 12.0;Database=C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Productos\Electronic accessories.xlsx;HDR=YES',
-    'SELECT [Product], [Precio Unitario en dolares] FROM [Sheet1$]');
-
-	--FIJARSE
+	/*--FIJARSE
 	SELECT * FROM ddbba.Producto
 
 	-----EJECUTAR EL STORE PROCEDURE--------------debe colocar la ruta a sus archivos---------------------------------------------------------------------------
-	EXEC imp.Importar_ElectronicAccessories 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Productos\Electronic accessories.xlsx';
-	EXEC imp.Importar_ElectronicAccessories 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Productos\Electronic accessories.xlsx';
+	EXEC imp.Importar_ElectronicAccessories 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Productos\Electronic accessories.xlsx',1063.75;
+	EXEC imp.Importar_ElectronicAccessories 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Productos\Electronic accessories.xlsx', 1063.75
 	-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-	--para solucionar error 7099, 7050 Win+R -->services.msc -->SQL Server (SQLEXPRESS)--> propiedades-->iniciar sesion-->cabiar a "Cuenta del sistema local", Marca la casilla "Permitir que el servicio interactúe con el escritorio".
-
+	*/
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- 2. Procedimiento para importar Productos_importados.xlsx
@@ -185,22 +169,22 @@ BEGIN
         cantidadPorUnidad, 
         moneda, 
         fecha
-    FROM ##Temp
-  
+    FROM ##Temp tmp
+	  WHERE NOT EXISTS (SELECT 1 FROM ddbba.Producto Pr WHERE tmp.nombre_producto=Pr.nombre_producto)
 
     PRINT 'Productos insertados correctamente.';
 
     -- Insertar en ProveedorProvee (evitando duplicados)
     INSERT INTO ddbba.ProveedorProvee (id_proveedor, id_producto)
-    SELECT DISTINCT 
+    SELECT  
         p.id_proveedor, 
         pr.id_producto
-    FROM ##Temp t
-    JOIN ddbba.Proveedor p ON p.nombre = t.proveedor
-    JOIN ddbba.Producto pr ON pr.nombre_producto = t.nombre_producto 
-                          AND pr.precio_unitario = t.precio_unitario
-                          AND pr.cantidadPorUnidad = t.cantidadPorUnidad
+    FROM ddbba.Proveedor p 
+	INNER JOIN ##Temp tmp ON tmp.proveedor=p.nombre
+	INNER JOIN ddbba.Producto Pr ON Pr.nombre_producto=tmp.nombre_producto
 
+	WHERE NOT EXISTS (SELECT 1 FROM ddbba.ProveedorProvee PP WHERE PP.id_proveedor=(SELECT TOP 1 p.id_proveedor FROM ddbba.Proveedor p INNER JOIN ##Temp tmp ON tmp.proveedor=p.nombre)
+	and PP.id_producto=(SELECT TOP 1 Pr.id_producto FROM ddbba.Producto Pr INNER JOIN ##Temp tmp ON Pr.nombre_producto=tmp.nombre_producto));
 
     PRINT 'Relación Proveedor-Producto insertada correctamente.';
 
@@ -213,12 +197,7 @@ END;
 GO
 
 
-
-
-----borrar el SP
---DROP PROCEDURE Importar_Productos_importados
-
-	--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos---------------------------------------------------------------------------
+	/*--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos---------------------------------------------------------------------------
 	EXEC imp.Importar_Productos_importados 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Productos\Productos_importados.xlsx';
 	EXEC imp.Importar_Productos_importados 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Productos\Productos_importados.xlsx';
 	go
@@ -245,38 +224,10 @@ BEGIN
     SET NOCOUNT ON;
     DECLARE @SQL NVARCHAR(MAX);
 
-<<<<<<< HEAD
     -- Crear tabla temporal global para el catálogo
     IF OBJECT_ID('tempdb..##Temp_Catalogo') IS NOT NULL
         DROP TABLE ##Temp_Catalogo;
-=======
-    --crear tabla temporal para cargar los datos del catalogo
-	CREATE TABLE #Temp (
-				id int identity(1,1),
-				linea VARCHAR(50),
-				nombre_producto  VARCHAR(100),
-				precio_unitario DECIMAL(10, 2),
-				precio_referencia decimal (10,2),
-				unidad varchar(10),
-				fecha datetime
-			)
-	
-		SET @SQL = ' 
-		BULK INSERT #Temp
-		FROM ''' + @RutaArchivo + '''
-		WITH (
-			FORMAT = ''CSV'',
-			FIRSTROW = 2,
-			FIELDTERMINATOR = '','',
-			ROWTERMINATOR = ''0X0a'',
-			CODEPAGE = ''65001'',
-			TABLOCK
-		);';
-		
-		EXEC sp_executesql @SQL;
-	--creamos taba de ERRORES que carge los nombres mal escritos de los productos
-	
->>>>>>> e6ec30cad21111a8505a70c3a2fc513356e70d9a
+
 
     CREATE TABLE ##Temp_Catalogo (
         id INT IDENTITY(1,1),
@@ -348,6 +299,7 @@ BEGIN
         c.fecha
     FROM ##Temp_Catalogo c
     LEFT JOIN ##Temp_Clasificacion cl ON c.linea = cl.tipo_producto
+	WHERE NOT EXISTS (SELECT 1 FROM ddbba.Producto Pr WHERE c.nombre_producto=Pr.nombre_producto)
   
     PRINT 'Productos insertados correctamente en ddbba.Producto.';
 
@@ -362,7 +314,7 @@ GO
 
 
 
-	--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos-------------------------ARCHIVO CATALOGO.CSV----------------------------------------------------ARCHIVO INFROMSCION_COMPLEMENTARIA.XLSX-------------------------
+	/*--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos-------------------------ARCHIVO CATALOGO.CSV----------------------------------------------------ARCHIVO INFROMSCION_COMPLEMENTARIA.XLSX-------------------------
 	EXEC imp.Importar_Catalogo 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Productos\catalogo.csv', 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Informacion_complementaria.xlsx';
 	EXEC imp.Importar_Catalogo 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Productos\catalogo.csv', 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Informacion_complementaria.xlsx'
 	------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
@@ -425,7 +377,7 @@ BEGIN
 END;
 go
 	
-	--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos------------------------------------------------------------------
+	/*--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos------------------------------------------------------------------
 	EXEC imp.Importar_Informacion_complementaria_sucursal 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Informacion_complementaria.xlsx';
 	EXEC imp.Importar_Informacion_complementaria_sucursal 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Informacion_complementaria.xlsx';
 	----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
@@ -494,33 +446,13 @@ END; -- Fin SP
 go
 
 
-	--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos------------------------------------------------------------------
-	EXEC imp.Importar_Informacion_complementaria_empleado 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Informacion_complementaria.xlsx', 'Contrasenia';
+	/*--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos------------------------------------------------------------------
+	EXEC imp.Importar_Informacion_complementaria_empleado 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Informacion_complementaria.xlsx';
 	EXEC imp.Importar_Informacion_complementaria_empleado 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Informacion_complementaria.xlsx'
 	----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 	/*OBSERVAR INSERCION
 	SELECT * FROM ddbba.Empleado
 	*/
-
-	/*--DESENCRIPTAR Y VER LA TABLA ENTERA
-	SELECT id_empleado, 
-       CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', nombre)) AS Nombre,
-       CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', apellido)) AS Apellido,
-       CONVERT(NVARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', dni)) AS dni,
-       CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', direccion)) AS Direccion,
-       CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', cuil)) AS Cuil,
-       CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', email_personal)) AS Email_personal,
-       CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', email_empresarial)) AS Email_empresarial,
-       turno,
-       cargo,
-       id_sucursal
-FROM ddbba.Empleado;
-
-*/
-
-
-
-
 
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -541,15 +473,13 @@ BEGIN
 END;
 go
 
-	--EJECUTAR EL STORE PROCEDURE
+	/*-EJECUTAR EL STORE PROCEDURE
 	EXEC imp.Insertar_MediosDePago;
 	----------------------------*/
 	/*OBSERVAR INSERCION
 	SELECT * FROM ddbba.MedioPago
 	*/
 	
-
-go
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- 6.Procedimiento para importar Ventas_registradas.csv
@@ -603,7 +533,7 @@ BEGIN
 		
 
 		UPDATE #Temp
-		SET estado = CASE WHEN CAST(NEWID() AS BINARY(1)) % 2 = 0 THEN 'Pagada' ELSE 'NoPagada' END,
+		SET estado = CASE WHEN CAST(NEWID() AS BINARY(1)) % 2 = 0 THEN 'Pagado' ELSE 'NoPagado' END,
 		dni_cliente = RIGHT('00000000' + CAST(ABS(CHECKSUM(NEWID())) % 90000000 + 10000000 AS VARCHAR(8)), 8), --COLOCAR API
 		localidad = CASE
 		WHEN localidad = 'Yangon' THEN 'San Justo'
@@ -665,12 +595,12 @@ BEGIN
 		SET
 		t.id_producto=P.id_producto
 		FROM #temp t
-		INNER JOIN ddbba.Producto P ON P.nombre_producto=t.nombre_producto and P.precio_unitario=t.precio_unitario
+		INNER JOIN ddbba.Producto P ON P.nombre_producto=t.nombre_producto 
 
 ------------------------------------------------------------------------------------------------			
 
 		--insertamos los datos en CLIENTE
-		INSERT INTO ddbba.Cliente (dni,genero,tipo,apellido,nombre,fecha_nac)
+		INSERT INTO ddbba.Cliente (dni_cliente,genero,tipo,apellido,nombre,fecha_nac)
 		SELECT
 			dni_cliente,
 			genero,
@@ -679,7 +609,7 @@ BEGIN
 			nombre,
 			fnac
 		FROM #Temp tmp
-		WHERE NOT EXISTS (SELECT 1 FROM ddbba.Cliente c WHERE c.dni=tmp.dni_cliente)
+		WHERE NOT EXISTS (SELECT 1 FROM ddbba.Pedido Ped WHERE Ped.id_factura=tmp.id_factura)
 		
 		--insertamos datos en PEDIDO
 		INSERT INTO ddbba.Pedido (id_factura, fecha_pedido, hora_pedido, dni_cliente, id_mp, iden_pago, id_empleado, id_sucursal, tipo_factura, estado_factura)
@@ -696,21 +626,23 @@ BEGIN
 			t.estado
 		FROM #Temp t
 		WHERE NOT EXISTS (SELECT 1 FROM ddbba.Pedido P WHERE P.id_factura=t.id_factura);
+		
 		--insertar los datos en la tabla correspondiente PRODUCTOSOLICITADO	
 		INSERT INTO ddbba.ProductoSolicitado (id_factura, id_producto, cantidad)
 		SELECT
 			id_factura,
 			id_producto,
 			cantidad
-		FROM #Temp;
-
+		FROM #Temp t
+		WHERE NOT EXISTS 
+			(SELECT 1 FROM ddbba.ProductoSolicitado  PS WHERE PS.id_factura=t.id_factura and PS.id_producto=t.id_producto);
 	DROP TABLE #Temp;
 END;
 go
 
-	--EJECUTAR EL STORE PROCEDURE--------------------------------------------------------------------------------------------------------------------------
+	/*--EJECUTAR EL STORE PROCEDURE--------------------------------------------------------------------------------------------------------------------------
 	EXEC imp.Importar_Ventas_registradas_cliente_pedido_productosolicitado 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Ventas_registradas.csv';
-	------------------------------------------------------------------------------------------------------------------------------------------------------
+	------------------------------------------------------------------------------------------------------------------------------------------------------*/
 	
 	/*OBSERVAR INSERCION
 	SELECT  * FROM ddbba.Cliente
@@ -719,22 +651,23 @@ go
 	*/
 
 
-	--
+	
 
-/*
-CREATE PROCEDURE Borrar
-AS
-BEGIN
-	DROP TABLE ddbba.NotaCredito 
-	DROP TABLE ddbba.ProductoSolicitado
-	DROP TABLE ddbba.Pedido
-	DROP TABLE ddbba.MedioPago
-	DROP TABLE ddbba.Cliente
-	DROP TABLE ddbba.ProveedorProvee
-	DROP TABLE ddbba.Producto
-	DROP TABLE ddbba.Proveedor
-	DROP TABLE ddbba.Empleado
-	DROP TABLE ddbba.Sucursal
-END;	
+
+
+/*--DESENCRIPTAR Y VER LA TABLA ENTERA
+	SELECT id_empleado, 
+       CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', nombre)) AS Nombre,
+       CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', apellido)) AS Apellido,
+       CONVERT(NVARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', dni)) AS dni,
+       CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', direccion)) AS Direccion,
+       CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', cuil)) AS Cuil,
+       CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', email_personal)) AS Email_personal,
+       CONVERT(VARCHAR, DECRYPTBYPASSPHRASE('Contrasenia', email_empresarial)) AS Email_empresarial,
+       turno,
+       cargo,
+       id_sucursal
+FROM ddbba.Empleado;
+select 
 */
 
