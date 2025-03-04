@@ -433,7 +433,6 @@ BEGIN
     WITH FacturacionPorVendedor AS (
         SELECT 
             E.id_empleado,
-            E.nombre AS NombreVendedor,
             S.id_sucursal,
             S.localidad AS LocalidadSucursal,
             SUM(PS.cantidad * P.precio_unitario) AS TotalFacturado,
@@ -447,15 +446,14 @@ BEGIN
        
         WHERE MONTH(Ped.fecha_pedido) = @Mes 
           AND YEAR(Ped.fecha_pedido) = @Anio
-        GROUP BY E.id_empleado, E.nombre, S.id_sucursal, S.localidad
+        GROUP BY E.id_empleado, S.id_sucursal, S.localidad
     )
 
     -- Seleccionar solo los mejores vendedores (RANK = 1) por sucursal
     SELECT 
         FV.id_sucursal AS Id_sucursal,
         FV.LocalidadSucursal AS Localidad,
-        FV.id_empleado AS Id_empleado,
-        FV.NombreVendedor AS Vendedor,
+        FV.id_empleado AS LegajoEmpleado,
         FV.TotalFacturado AS Total_facturado
     FROM FacturacionPorVendedor FV
     WHERE FV.Rnk = 1 -- Solo los vendedores top por sucursal
