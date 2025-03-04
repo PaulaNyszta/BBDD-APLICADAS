@@ -68,19 +68,38 @@ EXEC ddbba.insertarProvee
 SELECT * FROM ddbba.Provee WHERE id_producto = 1 AND id_proveedor = 1; --observe que los datos fueron agregado exitosamente
 
 
---prueba para SP insertarCliente, Ejecute los siguientes juegos de prueba y  luego el SELECT para ver los resultados
--- datos invalidos
-EXEC ddbba.insertarCliente
-    90000,'Mal','Norma','Gomez','Pedro','2030-11-12'; -- debe dar error el genero
-EXEC ddbba.insertarCliente
-    90000,'Male','Norma','Gomez','Pedro','2030-11-12'; -- debe dar erro el tipo de cliente
-EXEC ddbba.insertarCliente
-    90000,'Male','Normal','Gomez','Pedro','2030-11-12'; -- debe dar error la fecha
-EXEC ddbba.insertarCliente
-    90000,'Male','Normal','Gomez','Pedro','2019-11-12'; --de insertar correctamente el cliente
-EXEC ddbba.insertarCliente
-    90000,'Male','Normal','Gomez','Pedro','2019-11-12'; --debe decir que el id ya existe (error del sistema)
-SELECT * FROM ddbba.Cliente WHERE id_cliente = 90000 --observe que el cliente fue agregado exitosamente
+--Prueba para SP insertarCliente, Ejecute los siguientes juegos de prueba
+EXEC Procedimientos.insertarCliente 
+    '12345678',  -- DNI
+    'Male',       -- Género
+    'Normal',     -- Tipo
+    'Gomez',      -- Apellido
+    'Pedro',      -- Nombre
+    '1990-01-01'; -- Fecha de nacimiento
+
+--1. Prueba con campos nulos: Debe devolver un mensaje de error indicando que ninguno de los campos puede ser nulo.
+	EXEC Procedimientos.insertarCliente NULL, 'Male', 'Normal', 'Gomez', 'Pedro', '1990-01-01'; -- Debe devolver 'Error: Ningún campo puede ser NULL'
+	EXEC Procedimientos.insertarCliente '12345678', NULL, 'Normal', 'Gomez', 'Pedro', '1990-01-01'; -- Debe devolver 'Error: Ningún campo puede ser NULL'
+--2. Prueba de cliente ya existente: Debe devolver un mensaje indicando que el cliente ya existe.
+	EXEC Procedimientos.insertarCliente '12345678', 'Male', 'Normal', 'Gomez', 'Pedro', '1990-01-01'; -- Si ya existe, debe devolver 'Cliente ya existente'
+--3. Prueba con DNI incorrecto (menos de 8 dígitos): Debe devolver un mensaje indicando que el DNI debe tener 8 dígitos.
+	EXEC Procedimientos.insertarCliente '12345', 'Male', 'Normal', 'Gomez', 'Pedro', '1990-01-01'; -- Debe devolver 'Error: El DNI debe ser de 8 dígitos'
+--4. Prueba con DNI incorrecto (más de 8 dígitos): Debe devolver un mensaje indicando que el DNI debe tener 8 dígitos.
+	EXEC Procedimientos.insertarCliente '1234566689', 'Male', 'Normal', 'Gomez', 'Pedro', '1990-01-01'; -- Debe devolver 'Error: El DNI debe ser de 8 dígitos'
+--5. Prueba con género inválido: Debe devolver un mensaje indicando que el género debe ser "Female" o "Male".
+	EXEC Procedimientos.insertarCliente '12345578', 'Other', 'Normal', 'Gomez', 'Pedro', '1990-01-01'; -- Debe devolver 'Error: El género debe ser "Female" o "Male"'
+--6. Prueba con tipo de cliente inválido: Debe devolver un mensaje indicando que el tipo de cliente debe ser "Normal" o "Member".
+	EXEC Procedimientos.insertarCliente '12345678', 'Male', 'VIP', 'Gomez', 'Pedro', '1990-01-01'; -- Debe devolver 'Error: El tipo de cliente debe ser "Normal" o "Member"'
+--7. Prueba con fecha de nacimiento futura:Debe devolver un mensaje indicando que la fecha de nacimiento no puede ser futura.
+	EXEC Procedimientos.insertarCliente '12345678', 'Male', 'Normal', 'Gomez', 'Pedro', '2050-01-01'; -- Debe devolver 'Error: La fecha de nacimiento no puede ser futura'
+
+-- REVISAR
+SELECT * FROM ddbba.Cliente
+-- ELIMINAR
+DELETE  FROM ddbba.Cliente WHERE dni = '12345678'
+
+
+
 
 -- prueba para SP insertarMedioPago, Ejecute los siguientes juegos de prueba y  luego el SELECT para ver los resultados
 -- datos invalidos
