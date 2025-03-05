@@ -28,23 +28,23 @@
           <AssociatedConnUserName />
           <FullPath>01_Creacion.sql</FullPath>
         </FileNode>
-        <FileNode Name="02_ScriptPrueba.sql">
+        <FileNode Name="02_ImportacionArchivos.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:LAPTOP-TV7O0ND7\SQLEXPRESS:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>LAPTOP-TV7O0ND7\SQLEXPRESS</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>02_ScriptPrueba.sql</FullPath>
+          <FullPath>02_ImportacionArchivos.sql</FullPath>
         </FileNode>
-        <FileNode Name="03_ImportacionArchivos.sql">
+        <FileNode Name="03_Reportes.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:LAPTOP-TV7O0ND7\SQLEXPRESS:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>LAPTOP-TV7O0ND7\SQLEXPRESS</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>03_ImportacionArchivos.sql</FullPath>
+          <FullPath>03_Reportes.sql</FullPath>
         </FileNode>
-        <FileNode Name="04_Reportes.sql">
+        <FileNode Name="1_Testing.sql">
           <AssociatedConnectionMoniker>8c91a03d-f9b4-46c0-a305-b5dcc79ff907:LAPTOP-TV7O0ND7\SQLEXPRESS:True</AssociatedConnectionMoniker>
           <AssociatedConnSrvName>LAPTOP-TV7O0ND7\SQLEXPRESS</AssociatedConnSrvName>
           <AssociatedConnUserName />
-          <FullPath>04_Reportes.sql</FullPath>
+          <FullPath>1_Testing.sql</FullPath>
         </FileNode>
       </Items>
     </LogicalFolder>
