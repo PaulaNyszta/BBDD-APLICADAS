@@ -1,6 +1,10 @@
 -- 2. CRIPT DE PRUEBAS - 28/02/2025 - Com 1353 - Grupo 01 - Base de Datos Aplicadas, BARRIONUEVO LUCIANO [45429539], NYSZTA PAULA [45129511].
+
 --ATENCION: Estas pruebas se ejecutaran paso por paso siguiendo las instruccion en el orden dado :)
---0 usar la base de datos
+--SI ANTES SE REALIZAZON IMPORTACIONES, LO MEJOR ES ELIMINAR EL CONTENIDO DE LAS TABLAS (codigo se cuentra mas abajo en medio) 
+--PARA QUE NO HAYA ERRORES A LA HORA DE CARGAR LOS DATOS DE PRUEBA
+
+-- usar la base de datos
 Use Com1353G01
 DISABLE TRIGGER ddbba.trg_Empleado_Encrypt ON ddbba.Empleado; --desabilotar el trigger para hacer las pruebas
 
@@ -1469,21 +1473,25 @@ EXEC Procedimientos.eliminarProductoSolicitado
 
 
 
---Por ultimo DEBEMOS VACIAR TODAS LAS TABLAS, como hay FK involucradas, directamente eliminamos las tablas
-	DROP TABLE ddbba.NotaCredito 
-	DROP TABLE ddbba.ProductoSolicitado
-	DROP TABLE ddbba.Pedido
-	DROP TABLE ddbba.MedioPago
-	DROP TABLE ddbba.Cliente
-	DROP TABLE ddbba.ProveedorProvee
-	DROP TABLE ddbba.Producto
-	DROP TABLE ddbba.Proveedor
-	DROP TABLE ddbba.Empleado
-	DROP TABLE ddbba.Sucursal
 
---IMPORTANTE, VOLVER AL SCRIPT 1 DAR A >EXECUTE
---habilitar el trigger
-ENABLE TRIGGER ddbba.trg_Empleado_Encrypt ON ddbba.Empleado;
+
+
+
+	--Por ultimo DEBEMOS VACIAR TODAS LAS TABLAS, como hay FK involucradas, directamente eliminamos las tablas
+											DROP TABLE ddbba.NotaCredito 
+											DROP TABLE ddbba.ProductoSolicitado
+											DROP TABLE ddbba.Pedido
+											DROP TABLE ddbba.MedioPago
+											DROP TABLE ddbba.Cliente
+											DROP TABLE ddbba.ProveedorProvee
+											DROP TABLE ddbba.Producto
+											DROP TABLE ddbba.Proveedor
+											DROP TABLE ddbba.Empleado
+											DROP TABLE ddbba.Sucursal
+
+										--IMPORTANTE, VOLVER AL SCRIPT 1 DAR A >EXECUTE
+										--habilitar el trigger
+										ENABLE TRIGGER ddbba.trg_Empleado_Encrypt ON ddbba.Empleado;
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
