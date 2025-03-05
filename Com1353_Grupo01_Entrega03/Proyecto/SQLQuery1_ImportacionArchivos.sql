@@ -90,7 +90,6 @@ GO
 	SELECT * FROM ddbba.Producto
 
 	-----EJECUTAR EL STORE PROCEDURE--------------debe colocar la ruta a sus archivos---------------------------------------------------------------------------
-	EXEC imp.Importar_ElectronicAccessories 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Productos\Electronic accessories.xlsx',1063.75;
 	EXEC imp.Importar_ElectronicAccessories 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Productos\Electronic accessories.xlsx', 1063.75
 	-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 	*/
@@ -198,7 +197,6 @@ GO
 
 
 	/*--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos---------------------------------------------------------------------------
-	EXEC imp.Importar_Productos_importados 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Productos\Productos_importados.xlsx';
 	EXEC imp.Importar_Productos_importados 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Productos\Productos_importados.xlsx';
 	go
 	----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
@@ -316,7 +314,6 @@ GO
 
 	/*--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos-------------------------ARCHIVO CATALOGO.CSV----------------------------------------------------ARCHIVO INFROMSCION_COMPLEMENTARIA.XLSX-------------------------
 	EXEC imp.Importar_Catalogo 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Productos\catalogo.csv', 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Informacion_complementaria.xlsx';
-	EXEC imp.Importar_Catalogo 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Productos\catalogo.csv', 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Informacion_complementaria.xlsx'
 	------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 	/*OBSERVAR INSERCION
 	SELECT * FROM ddbba.Producto 
@@ -378,7 +375,6 @@ END;
 go
 	
 	/*--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos------------------------------------------------------------------
-	EXEC imp.Importar_Informacion_complementaria_sucursal 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Informacion_complementaria.xlsx';
 	EXEC imp.Importar_Informacion_complementaria_sucursal 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Informacion_complementaria.xlsx';
 	----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 	/*OBSERVAR INSERCION
@@ -448,7 +444,6 @@ go
 
 	/*--EJECUTAR EL STORE PROCEDURE----------------------------------------------------debe colocar la ruta a sus archivos------------------------------------------------------------------
 	EXEC imp.Importar_Informacion_complementaria_empleado 'C:\Users\paula\Downloads\TP_integrador_Archivos_1 (1)\TP_integrador_Archivos\Informacion_complementaria.xlsx';
-	EXEC imp.Importar_Informacion_complementaria_empleado 'C:\Users\luciano\Desktop\TP_integrador_Archivos\Informacion_complementaria.xlsx'
 	----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
 	/*OBSERVAR INSERCION
 	SELECT * FROM ddbba.Empleado
